@@ -46,7 +46,7 @@ const PredictionCard = ({ prediction }: PredictionCardProps) => {
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Brain className="h-6 w-6 text-primary" />
-            Portfolio Analysis - {prediction.symbol}
+            Stock Analysis - {prediction.symbol}
           </div>
           <div className="flex gap-2">
             <Badge variant={isPositive ? "default" : "destructive"} className="text-sm">

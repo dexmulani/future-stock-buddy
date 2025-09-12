@@ -26,7 +26,7 @@ const StockSearch = ({ onPredict, isLoading = false }: StockSearchProps) => {
       <CardHeader className="text-center">
         <CardTitle className="flex items-center justify-center gap-2 text-primary">
           <TrendingUp className="h-6 w-6" />
-          Portfolio Analysis
+          Stock Analysis
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -35,7 +35,7 @@ const StockSearch = ({ onPredict, isLoading = false }: StockSearchProps) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               type="text"
-              placeholder="Enter stock symbol (e.g., RELIANCE)"
+              placeholder="Enter stock name (e.g., RELIANCE)"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
               className="pl-10 text-center font-mono text-lg"
@@ -72,7 +72,7 @@ const StockSearch = ({ onPredict, isLoading = false }: StockSearchProps) => {
             ) : (
               <div className="flex items-center gap-2">
                 <IndianRupee className="h-4 w-4" />
-                Analyze Portfolio
+                Predict Your Stock
               </div>
             )}
           </Button>
