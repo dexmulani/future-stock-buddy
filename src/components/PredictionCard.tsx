@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TrendingUp, TrendingDown, Brain, Calendar, Target, ShoppingCart, Banknote, AlertTriangle, CheckCircle2 } from "lucide-react";
+import StockChart from "./StockChart";
 
 interface PredictionData {
   symbol: string;
@@ -121,6 +122,15 @@ const PredictionCard = ({ prediction }: PredictionCardProps) => {
             </div>
           </div>
         </div>
+
+        {/* Stock Chart with Buy/Sell Indicators */}
+        <StockChart 
+          symbol={prediction.symbol}
+          currentPrice={prediction.currentPrice}
+          targetPrice={prediction.targetPrice}
+          stopLoss={prediction.stopLoss}
+          recommendation={prediction.recommendation}
+        />
 
         <div className="flex items-center justify-between p-4 bg-primary/5 rounded-lg">
           <div className="flex items-center gap-2">
