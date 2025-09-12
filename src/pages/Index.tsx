@@ -15,40 +15,68 @@ interface PredictionData {
   trend: "up" | "down";
   change: number;
   changePercent: number;
+  recommendation: "BUY" | "SELL" | "HOLD";
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  targetPrice: number;
+  stopLoss: number;
+  reasons: string[];
 }
 
 const Index = () => {
   const [prediction, setPrediction] = useState<PredictionData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handlePredict = async (symbol: string) => {
+  const getTimeframeText = (period: string) => {
+    const timeframes = {
+      "1day": "Next 1 Day",
+      "1week": "Next 7 Days", 
+      "1month": "Next 30 Days",
+      "3months": "Next 3 Months",
+      "6months": "Next 6 Months",
+      "1year": "Next 1 Year"
+    };
+    return timeframes[period as keyof typeof timeframes] || "Next 7 Days";
+  };
+
+  const handlePredict = async (symbol: string, holdingPeriod: string) => {
     setIsLoading(true);
     
     // Simulate API call - In real app, this would call your AI backend
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 2500));
     
-    // Mock prediction data
+    // Mock prediction data with Indian stock prices (higher range)
+    const basePrice = Math.random() * 3000 + 100; // ₹100 to ₹3100
+    const changePercent = (Math.random() * 20 - 10); // -10% to +10%
+    const isPositive = changePercent > 0;
+    
     const mockData: PredictionData = {
       symbol,
-      currentPrice: Math.random() * 500 + 50,
-      predictedPrice: 0,
-      confidence: Math.floor(Math.random() * 30) + 70,
-      timeframe: "Next 7 days",
-      trend: Math.random() > 0.5 ? "up" : "down",
-      change: 0,
-      changePercent: 0
+      currentPrice: basePrice,
+      predictedPrice: basePrice * (1 + changePercent / 100),
+      confidence: Math.floor(Math.random() * 25) + 75, // 75-100%
+      timeframe: getTimeframeText(holdingPeriod),
+      trend: isPositive ? "up" : "down",
+      change: basePrice * (changePercent / 100),
+      changePercent: changePercent,
+      recommendation: isPositive && changePercent > 5 ? "BUY" : 
+                     changePercent < -5 ? "SELL" : "HOLD",
+      riskLevel: Math.abs(changePercent) < 3 ? "LOW" : 
+                 Math.abs(changePercent) < 7 ? "MEDIUM" : "HIGH",
+      targetPrice: basePrice * (1 + changePercent / 100),
+      stopLoss: basePrice * 0.95, // 5% stop loss
+      reasons: [
+        isPositive ? "Strong technical indicators showing upward momentum" : "Market indicators suggest downward pressure",
+        "Volume analysis supports the predicted direction",
+        `${holdingPeriod} timeframe analysis shows favorable conditions`,
+        "Sector performance aligns with prediction",
+        "AI confidence level is above 75%"
+      ]
     };
-    
-    const changePercent = (Math.random() * 10 - 5); // -5% to +5%
-    mockData.predictedPrice = mockData.currentPrice * (1 + changePercent / 100);
-    mockData.change = mockData.predictedPrice - mockData.currentPrice;
-    mockData.changePercent = changePercent;
-    mockData.trend = changePercent > 0 ? "up" : "down";
     
     setPrediction(mockData);
     setIsLoading(false);
     
-    toast.success(`AI prediction generated for ${symbol}!`);
+    toast.success(`Portfolio analysis completed for ${symbol}!`);
   };
 
   const handleGetStarted = () => {
@@ -68,12 +96,12 @@ const Index = () => {
             AI-Powered
             <br />
             <span className="bg-gradient-accent bg-clip-text text-transparent">
-              Stock Predictions
+              Portfolio Analysis
             </span>
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90 max-w-2xl mx-auto animate-in fade-in duration-1000 delay-300">
-            Get intelligent stock price predictions powered by advanced AI algorithms. 
-            Make informed investment decisions with confidence.
+            Analyze Indian stocks with AI-powered insights. Get buy/sell recommendations 
+            with custom holding periods for smarter investment decisions.
           </p>
           <Button 
             size="lg" 
@@ -91,28 +119,28 @@ const Index = () => {
       <section className="py-16 px-4 bg-gradient-secondary">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-primary">
-            Powered by Advanced AI
+            Smart Portfolio Management
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
               <Brain className="h-12 w-12 text-accent mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Smart Analysis</h3>
+              <h3 className="text-xl font-semibold mb-2">AI-Powered Analysis</h3>
               <p className="text-muted-foreground">
-                Advanced machine learning algorithms analyze market patterns and trends
+                Advanced algorithms analyze Indian market patterns and provide actionable insights
               </p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
               <Zap className="h-12 w-12 text-accent mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Real-time Data</h3>
+              <h3 className="text-xl font-semibold mb-2">Custom Holding Periods</h3>
               <p className="text-muted-foreground">
-                Instant predictions based on the latest market data and news
+                Analyze stocks for various timeframes from 1 day to 1 year investment horizons
               </p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
               <Shield className="h-12 w-12 text-accent mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">High Accuracy</h3>
+              <h3 className="text-xl font-semibold mb-2">Buy/Sell Signals</h3>
               <p className="text-muted-foreground">
-                Consistently accurate predictions with transparent confidence scores
+                Clear recommendations with risk assessment and stop-loss suggestions
               </p>
             </div>
           </div>
@@ -124,10 +152,10 @@ const Index = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-primary">
-              Get Your Stock Prediction
+              Analyze Your Portfolio
             </h2>
             <p className="text-lg text-muted-foreground">
-              Enter any stock symbol to receive an AI-powered price prediction
+              Enter Indian stock symbols with your preferred holding period for comprehensive analysis
             </p>
           </div>
           
@@ -146,13 +174,13 @@ const Index = () => {
       {/* CTA Section */}
       <section className="py-16 px-4 bg-primary text-primary-foreground text-center">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Trading Smarter?</h2>
+          <h2 className="text-3xl font-bold mb-4">Ready to Optimize Your Portfolio?</h2>
           <p className="text-lg mb-6 text-primary-foreground/90">
-            Join thousands of investors using AI-powered predictions to make better investment decisions.
+            Join thousands of Indian investors using AI-powered analysis for smarter trading decisions.
           </p>
           <div className="text-sm text-primary-foreground/70">
-            <p>⚠️ Backend integration required for live predictions</p>
-            <p>Connect to Supabase to enable real AI-powered stock analysis</p>
+            <p>⚠️ Backend integration required for real-time analysis</p>
+            <p>Connect to Supabase to enable live Indian stock market data and AI predictions</p>
           </div>
         </div>
       </section>
