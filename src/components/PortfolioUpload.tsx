@@ -80,23 +80,22 @@ const PortfolioUpload = ({ onPortfolioAnalyzed }: PortfolioUploadProps) => {
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-3">
             <label className="text-sm font-medium">Upload Portfolio File</label>
-            <div className="relative">
-              <Input
-                type="file"
-                accept=".csv,.xlsx,.txt"
-                onChange={handleFileUpload}
-                className="file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-              />
-              <Upload className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
+            <Input
+              type="file"
+              accept=".csv,.xlsx,.txt"
+              onChange={handleFileUpload}
+              className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+            />
           </div>
           
           <div className="space-y-3">
-            <label className="text-sm font-medium">Or Share Portfolio</label>
-            <Button variant="outline" className="w-full justify-start">
-              <Share2 className="h-4 w-4 mr-2" />
-              Connect Trading Account
-            </Button>
+            <label className="text-sm font-medium">Add Your Portfolio Photo</label>
+            <Input
+              type="file"
+              accept="image/*"
+              onChange={handleFileUpload}
+              className="file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/90"
+            />
           </div>
         </div>
 
