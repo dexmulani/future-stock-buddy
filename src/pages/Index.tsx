@@ -2,6 +2,8 @@ import { useState } from "react";
 import { toast } from "sonner";
 import StockSearch from "@/components/StockSearch";
 import PredictionCard from "@/components/PredictionCard";
+import PortfolioUpload from "@/components/PortfolioUpload";
+import PortfolioHealth from "@/components/PortfolioHealth";
 import { Button } from "@/components/ui/button";
 import { Brain, Zap, Shield, TrendingUp } from "lucide-react";
 import heroImage from "@/assets/stock-hero.jpg";
@@ -22,9 +24,18 @@ interface PredictionData {
   reasons: string[];
 }
 
+interface PortfolioStock {
+  symbol: string;
+  quantity: number;
+  avgPrice: number;
+  currentPrice: number;
+}
+
 const Index = () => {
   const [prediction, setPrediction] = useState<PredictionData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [portfolioStocks, setPortfolioStocks] = useState<PortfolioStock[]>([]);
+  const [sellRecommendations, setSellRecommendations] = useState<string[]>([]);
 
   const getTimeframeText = (period: string) => {
     const timeframes = {
@@ -76,7 +87,12 @@ const Index = () => {
     setPrediction(mockData);
     setIsLoading(false);
     
-    toast.success(`Portfolio analysis completed for ${symbol}!`);
+    toast.success(`Stock analysis completed for ${symbol}!`);
+  };
+
+  const handlePortfolioAnalyzed = (stocks: PortfolioStock[], recommendations: string[]) => {
+    setPortfolioStocks(stocks);
+    setSellRecommendations(recommendations);
   };
 
   const handleGetStarted = () => {
@@ -93,10 +109,8 @@ const Index = () => {
         />
         <div className="relative z-10 max-w-4xl mx-auto">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-in fade-in duration-1000">
-            AI-Powered
-            <br />
             <span className="bg-gradient-accent bg-clip-text text-transparent">
-              Portfolio Analysis
+              Stock Pulse
             </span>
           </h1>
           <p className="text-xl md:text-2xl mb-8 text-primary-foreground/90 max-w-2xl mx-auto animate-in fade-in duration-1000 delay-300">
@@ -152,10 +166,10 @@ const Index = () => {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-3xl md:text-4xl font-bold mb-4 text-primary">
-              Analyze Your Portfolio
+              What's Your Stock Today!
             </h2>
             <p className="text-lg text-muted-foreground">
-              Enter Indian stock symbols with your preferred holding period for comprehensive analysis
+              Enter Indian stock names with your preferred holding period for comprehensive analysis
             </p>
           </div>
           
@@ -166,6 +180,33 @@ const Index = () => {
           {prediction && (
             <div className="animate-in fade-in duration-500">
               <PredictionCard prediction={prediction} />
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Portfolio Upload Section */}
+      <section className="py-16 px-4 bg-gradient-secondary">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-primary">
+              Portfolio Analysis
+            </h2>
+            <p className="text-lg text-muted-foreground">
+              Upload your portfolio for comprehensive analysis and get personalized recommendations
+            </p>
+          </div>
+          
+          <div className="mb-8">
+            <PortfolioUpload onPortfolioAnalyzed={handlePortfolioAnalyzed} />
+          </div>
+          
+          {portfolioStocks.length > 0 && (
+            <div className="animate-in fade-in duration-500">
+              <PortfolioHealth 
+                stocks={portfolioStocks} 
+                sellRecommendations={sellRecommendations} 
+              />
             </div>
           )}
         </div>
