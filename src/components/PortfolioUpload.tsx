@@ -81,40 +81,23 @@ const PortfolioUpload = ({ onPortfolioAnalyzed }: PortfolioUploadProps) => {
         </p>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <FileText className="h-4 w-4 text-primary" />
-              Upload Portfolio File
-            </label>
-            <div className="relative group">
-              <Input
-                type="file"
-                accept=".csv,.xlsx,.txt"
-                onChange={handleFileUpload}
-                className="file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors"
-              />
-              <Upload className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-            </div>
-            <p className="text-xs text-muted-foreground">CSV, Excel (.xlsx), Text files</p>
+        <div className="space-y-4">
+          <label className="text-sm font-medium flex items-center gap-2">
+            <Upload className="h-4 w-4 text-primary" />
+            Upload Portfolio File or Screenshot
+          </label>
+          <div className="relative group">
+            <Input
+              type="file"
+              accept=".csv,.xlsx,.txt,.pdf,image/*"
+              onChange={handleFileUpload}
+              className="file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors"
+            />
+            <FileText className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
-          
-          <div className="space-y-3">
-            <label className="text-sm font-medium flex items-center gap-2">
-              <Share2 className="h-4 w-4 text-secondary" />
-              Add Your Portfolio Photo
-            </label>
-            <div className="relative group">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                className="file:mr-4 file:py-3 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors"
-              />
-              <Upload className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-            </div>
-            <p className="text-xs text-muted-foreground">Upload screenshot of your portfolio</p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Supported formats: CSV, Excel (.xlsx), PDF, Text files, Screenshots (JPG, PNG, etc.)
+          </p>
         </div>
 
         <div className="flex gap-3">
