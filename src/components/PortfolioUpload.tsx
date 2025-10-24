@@ -106,7 +106,7 @@ const PortfolioUpload = ({
             Upload Portfolio File or Screenshot
           </label>
           <div className="relative group">
-            <Input type="file" accept=".csv,.xlsx,.txt,.pdf,image/*" onChange={handleFileUpload} className="file:mr-4 file:px-6 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors py-0 mx-0" />
+            <Input type="file" accept=".csv,.xlsx,.txt,.pdf,image/*" onChange={handleFileUpload} className="file:mr-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors mx-0 px-[15px] py-[8px]" />
             <FileText className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
           <p className="text-xs text-muted-foreground">
