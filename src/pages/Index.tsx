@@ -219,10 +219,14 @@ const Index = () => {
           <p className="text-lg mb-6 text-primary-foreground/90">
             Join thousands of Indian investors using AI-powered analysis for smarter trading decisions.
           </p>
-          <div className="text-sm text-primary-foreground/70">
-            <p>⚠️ Backend integration required for real-time analysis</p>
-            <p>Connect to Supabase to enable live Indian stock market data and AI predictions</p>
-          </div>
+          <Button 
+            size="lg" 
+            variant="secondary"
+            onClick={handleGetStarted}
+            className="bg-white/90 text-primary hover:bg-white"
+          >
+            Start Analyzing
+          </Button>
         </div>
       </section>
     </div>
