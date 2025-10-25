@@ -14,7 +14,174 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      portfolio_stocks: {
+        Row: {
+          buy_price: number
+          created_at: string | null
+          current_price: number | null
+          id: string
+          portfolio_id: string
+          profit_loss: number | null
+          profit_loss_percentage: number | null
+          quantity: number
+          stock_name: string | null
+          stock_symbol: string
+          total_value: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          buy_price: number
+          created_at?: string | null
+          current_price?: number | null
+          id?: string
+          portfolio_id: string
+          profit_loss?: number | null
+          profit_loss_percentage?: number | null
+          quantity: number
+          stock_name?: string | null
+          stock_symbol: string
+          total_value?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          buy_price?: number
+          created_at?: string | null
+          current_price?: number | null
+          id?: string
+          portfolio_id?: string
+          profit_loss?: number | null
+          profit_loss_percentage?: number | null
+          quantity?: number
+          stock_name?: string | null
+          stock_symbol?: string
+          total_value?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_stocks_portfolio_id_fkey"
+            columns: ["portfolio_id"]
+            isOneToOne: false
+            referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolios: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          total_value: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          total_value?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          total_value?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolios_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      sell_recommendations: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          holding_period: string | null
+          id: string
+          portfolio_stock_id: string
+          predicted_price: number | null
+          reason: string | null
+          recommendation: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          holding_period?: string | null
+          id?: string
+          portfolio_stock_id: string
+          predicted_price?: number | null
+          reason?: string | null
+          recommendation: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          holding_period?: string | null
+          id?: string
+          portfolio_stock_id?: string
+          predicted_price?: number | null
+          reason?: string | null
+          recommendation?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sell_recommendations_portfolio_stock_id_fkey"
+            columns: ["portfolio_stock_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_stocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      Stocks_table: {
+        Row: {
+          created_at: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          id?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
