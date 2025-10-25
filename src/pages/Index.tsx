@@ -7,6 +7,7 @@ import PortfolioHealth from "@/components/PortfolioHealth";
 import { Button } from "@/components/ui/button";
 import { Brain, Zap, Shield, TrendingUp } from "lucide-react";
 import heroImage from "@/assets/stock-hero.jpg";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PredictionData {
   symbol: string;
@@ -52,42 +53,26 @@ const Index = () => {
   const handlePredict = async (symbol: string, holdingPeriod: string) => {
     setIsLoading(true);
     
-    // Simulate API call - In real app, this would call your AI backend
-    await new Promise(resolve => setTimeout(resolve, 2500));
-    
-    // Mock prediction data with Indian stock prices (higher range)
-    const basePrice = Math.random() * 3000 + 100; // ₹100 to ₹3100
-    const changePercent = (Math.random() * 20 - 10); // -10% to +10%
-    const isPositive = changePercent > 0;
-    
-    const mockData: PredictionData = {
-      symbol,
-      currentPrice: basePrice,
-      predictedPrice: basePrice * (1 + changePercent / 100),
-      confidence: Math.floor(Math.random() * 25) + 75, // 75-100%
-      timeframe: getTimeframeText(holdingPeriod),
-      trend: isPositive ? "up" : "down",
-      change: basePrice * (changePercent / 100),
-      changePercent: changePercent,
-      recommendation: isPositive && changePercent > 5 ? "BUY" : 
-                     changePercent < -5 ? "SELL" : "HOLD",
-      riskLevel: Math.abs(changePercent) < 3 ? "LOW" : 
-                 Math.abs(changePercent) < 7 ? "MEDIUM" : "HIGH",
-      targetPrice: basePrice * (1 + changePercent / 100),
-      stopLoss: basePrice * 0.95, // 5% stop loss
-      reasons: [
-        isPositive ? "Strong technical indicators showing upward momentum" : "Market indicators suggest downward pressure",
-        "Volume analysis supports the predicted direction",
-        `${holdingPeriod} timeframe analysis shows favorable conditions`,
-        "Sector performance aligns with prediction",
-        "AI confidence level is above 75%"
-      ]
-    };
-    
-    setPrediction(mockData);
-    setIsLoading(false);
-    
-    toast.success(`Stock analysis completed for ${symbol}!`);
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-stock', {
+        body: { symbol, holdingPeriod }
+      });
+
+      if (error) {
+        console.error('Analysis error:', error);
+        toast.error('Failed to analyze stock. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      setPrediction(data);
+      toast.success(`Stock analysis completed for ${symbol}!`);
+    } catch (error) {
+      console.error('Error calling analyze-stock:', error);
+      toast.error('Failed to fetch stock data. Please check the symbol and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePortfolioAnalyzed = (stocks: PortfolioStock[], recommendations: string[]) => {
