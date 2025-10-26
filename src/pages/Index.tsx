@@ -60,7 +60,17 @@ const Index = () => {
 
       if (error) {
         console.error('Analysis error:', error);
-        toast.error('Failed to analyze stock. Please try again.');
+        if (error.message?.includes('rate limit')) {
+          toast.error('API rate limit reached. Alpha Vantage free tier allows 25 requests/day. Please upgrade your API key or try again later.');
+        } else {
+          toast.error('Failed to analyze stock. Please try again.');
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.error) {
+        toast.error(data.error);
         setIsLoading(false);
         return;
       }

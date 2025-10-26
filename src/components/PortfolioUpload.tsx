@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, FileText, Share2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 interface PortfolioStock {
   symbol: string;
   quantity: number;
@@ -37,57 +38,91 @@ const PortfolioUpload = ({
       return;
     }
     setIsAnalyzing(true);
-    toast.info("AI is analyzing your portfolio...");
+    toast.info("Fetching real-time stock prices...");
 
-    // Simulate advanced AI analysis with realistic processing time
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    try {
+      // Parse CSV content (expecting format: Symbol,Quantity,AvgPrice)
+      const lines = portfolioText.trim().split('\n');
+      const portfolioData: { symbol: string; quantity: number; avgPrice: number }[] = [];
+      
+      // Skip header row and parse data
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const parts = line.split(',').map(p => p.trim());
+        if (parts.length >= 3) {
+          const symbol = parts[0].replace(/['"]/g, '').trim();
+          const quantity = parseInt(parts[1]);
+          const avgPrice = parseFloat(parts[2]);
+          
+          if (symbol && !isNaN(quantity) && !isNaN(avgPrice)) {
+            portfolioData.push({ symbol, quantity, avgPrice });
+          }
+        }
+      }
 
-    // Enhanced portfolio analysis with more realistic data
-    const mockStocks: PortfolioStock[] = [{
-      symbol: "RELIANCE",
-      quantity: 50,
-      avgPrice: 2400,
-      currentPrice: 2650
-    }, {
-      symbol: "TCS",
-      quantity: 30,
-      avgPrice: 3200,
-      currentPrice: 3450
-    }, {
-      symbol: "INFY",
-      quantity: 40,
-      avgPrice: 1500,
-      currentPrice: 1520
-    }, {
-      symbol: "HDFC BANK",
-      quantity: 25,
-      avgPrice: 1600,
-      currentPrice: 1580
-    }, {
-      symbol: "WIPRO",
-      quantity: 60,
-      avgPrice: 420,
-      currentPrice: 385
-    }, {
-      symbol: "MARUTI",
-      quantity: 15,
-      avgPrice: 9500,
-      currentPrice: 10200
-    }, {
-      symbol: "BHARTI",
-      quantity: 80,
-      avgPrice: 850,
-      currentPrice: 920
-    }, {
-      symbol: "COAL INDIA",
-      quantity: 100,
-      avgPrice: 180,
-      currentPrice: 165
-    }];
-    const sellRecommendations = ["WIPRO - IT sector facing headwinds, better opportunities in emerging tech stocks", "COAL INDIA - ESG concerns and declining coal demand affecting long-term prospects", "HDFC BANK - Short-term regulatory pressures, better entry points expected"];
-    onPortfolioAnalyzed(mockStocks, sellRecommendations);
-    setIsAnalyzing(false);
-    toast.success("Portfolio analysis completed! Check your results below.");
+      if (portfolioData.length === 0) {
+        toast.error("No valid stock data found in file. Expected format: Symbol,Quantity,AvgPrice");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      // Fetch current prices for all stocks
+      const stocksWithPrices: PortfolioStock[] = [];
+      const sellRecommendations: string[] = [];
+      
+      for (const stock of portfolioData) {
+        try {
+          const { data, error } = await supabase.functions.invoke('get-stock-quote', {
+            body: { symbol: stock.symbol }
+          });
+
+          if (error) {
+            console.error(`Error fetching ${stock.symbol}:`, error);
+            toast.error(`Failed to fetch price for ${stock.symbol}`);
+            continue;
+          }
+
+          if (data && data.price) {
+            const currentPrice = data.price;
+            stocksWithPrices.push({
+              symbol: stock.symbol,
+              quantity: stock.quantity,
+              avgPrice: stock.avgPrice,
+              currentPrice: currentPrice
+            });
+
+            // Generate sell recommendation if stock is down more than 10%
+            const lossPct = ((currentPrice - stock.avgPrice) / stock.avgPrice) * 100;
+            if (lossPct < -10) {
+              sellRecommendations.push(
+                `${stock.symbol} - Down ${Math.abs(lossPct).toFixed(1)}% from your buy price. Consider reviewing position.`
+              );
+            }
+          }
+
+          // Add small delay to avoid rate limiting
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err) {
+          console.error(`Error processing ${stock.symbol}:`, err);
+        }
+      }
+
+      if (stocksWithPrices.length === 0) {
+        toast.error("Unable to fetch stock prices. Please check your API key and try again later.");
+        setIsAnalyzing(false);
+        return;
+      }
+
+      onPortfolioAnalyzed(stocksWithPrices, sellRecommendations);
+      setIsAnalyzing(false);
+      toast.success(`Portfolio analysis completed! Analyzed ${stocksWithPrices.length} stocks.`);
+    } catch (error) {
+      console.error('Portfolio analysis error:', error);
+      toast.error('Failed to analyze portfolio. Please try again.');
+      setIsAnalyzing(false);
+    }
   };
   return <Card className="w-full max-w-4xl mx-auto shadow-card">
       <CardHeader>

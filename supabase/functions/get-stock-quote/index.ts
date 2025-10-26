@@ -37,10 +37,10 @@ serve(async (req) => {
       );
     }
 
-    if (data['Note']) {
-      console.error('API limit reached:', data['Note']);
+    if (data['Note'] || data['Information']) {
+      console.error('API limit reached:', data['Note'] || data['Information']);
       return new Response(
-        JSON.stringify({ error: 'API rate limit reached. Please try again later.' }),
+        JSON.stringify({ error: 'API rate limit reached. Alpha Vantage free tier allows 25 requests/day. Please upgrade your API key or try again later.' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

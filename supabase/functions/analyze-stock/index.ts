@@ -26,10 +26,18 @@ serve(async (req) => {
     const quoteData = await quoteResponse.json();
     console.log('Quote data:', quoteData);
 
-    if (quoteData['Error Message'] || quoteData['Note']) {
+    if (quoteData['Error Message']) {
       return new Response(
-        JSON.stringify({ error: 'Unable to fetch stock data' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: 'Stock symbol not found. Make sure to use correct Indian stock symbols.' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (quoteData['Note'] || quoteData['Information']) {
+      console.error('API limit reached:', quoteData['Note'] || quoteData['Information']);
+      return new Response(
+        JSON.stringify({ error: 'API rate limit reached. Alpha Vantage free tier allows 25 requests/day. Please upgrade your API key or try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
