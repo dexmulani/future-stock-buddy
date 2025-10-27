@@ -15,56 +15,46 @@ serve(async (req) => {
     const { symbol } = await req.json();
     console.log('Fetching stock quote for:', symbol);
 
-    const ALPHA_VANTAGE_API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
-    if (!ALPHA_VANTAGE_API_KEY) {
-      throw new Error('ALPHA_VANTAGE_API_KEY is not configured');
-    }
-
-    // Fetch quote from Alpha Vantage
-    const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    console.log('Calling Alpha Vantage API for symbol:', symbol);
+    // Use Indian Stock Market API (free, no API key needed)
+    // Format: For NSE stocks use .NS suffix, for BSE use .BO suffix
+    // If no suffix provided, default to NSE
+    const formattedSymbol = symbol.includes('.') ? symbol : `${symbol}.NS`;
+    const url = `https://nse-api-khaki.vercel.app/stock?symbol=${formattedSymbol}&res=num`;
+    console.log('Calling Indian Stock API for symbol:', formattedSymbol);
 
     const response = await fetch(url);
     const data = await response.json();
-    console.log('Alpha Vantage response:', data);
+    console.log('Indian Stock API response:', data);
 
-    // Check for API errors or rate limits
-    if (data['Error Message']) {
-      console.error('Alpha Vantage error:', data['Error Message']);
+    // Check for API errors
+    if (data.status === 'error') {
+      console.error('Indian Stock API error:', data.message);
       return new Response(
-        JSON.stringify({ error: data['Error Message'] }),
+        JSON.stringify({ error: data.message || 'Unable to fetch stock data' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (data['Note']) {
-      console.error('Alpha Vantage rate limit:', data['Note']);
-      return new Response(
-        JSON.stringify({ error: 'API rate limit reached. Please try again later.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Check if data is valid (Global Quote exists)
-    if (!data['Global Quote'] || Object.keys(data['Global Quote']).length === 0) {
+    // Check if data is valid
+    if (!data.data) {
       console.error('No quote data found for symbol:', symbol);
       return new Response(
-        JSON.stringify({ error: `No data available for symbol ${symbol}. Make sure to use the correct ticker symbol.` }),
+        JSON.stringify({ error: `No data available for symbol ${symbol}. Try using format like TCS.NS for NSE or TCS.BO for BSE.` }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const quote = data['Global Quote'];
+    const stockInfo = data.data;
     const stockData = {
-      symbol: quote['01. symbol'],
-      price: parseFloat(quote['05. price']),
-      change: parseFloat(quote['09. change']),
-      changePercent: parseFloat(quote['10. change percent'].replace('%', '')),
-      volume: parseInt(quote['06. volume']),
-      previousClose: parseFloat(quote['08. previous close']),
-      high: parseFloat(quote['03. high']),
-      low: parseFloat(quote['04. low']),
-      open: parseFloat(quote['02. open']),
+      symbol: data.symbol,
+      price: stockInfo.last_price,
+      change: stockInfo.change,
+      changePercent: stockInfo.percent_change,
+      volume: stockInfo.volume,
+      previousClose: stockInfo.previous_close,
+      high: stockInfo.day_high,
+      low: stockInfo.day_low,
+      open: stockInfo.open,
     };
 
     console.log('Stock data processed successfully:', stockData);

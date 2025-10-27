@@ -15,48 +15,38 @@ serve(async (req) => {
     const { symbol, holdingPeriod } = await req.json();
     console.log('Analyzing stock:', symbol, 'for period:', holdingPeriod);
 
-    const ALPHA_VANTAGE_API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
-    if (!ALPHA_VANTAGE_API_KEY) {
-      throw new Error('ALPHA_VANTAGE_API_KEY is not configured');
-    }
-
-    // Fetch current quote from Alpha Vantage
-    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
-    console.log('Fetching stock data for:', symbol);
+    // Use Indian Stock Market API (free, no API key needed)
+    // Format: For NSE stocks use .NS suffix, for BSE use .BO suffix
+    // If no suffix provided, default to NSE
+    const formattedSymbol = symbol.includes('.') ? symbol : `${symbol}.NS`;
+    const quoteUrl = `https://nse-api-khaki.vercel.app/stock?symbol=${formattedSymbol}&res=num`;
+    console.log('Fetching stock data for:', formattedSymbol);
     
     const quoteResponse = await fetch(quoteUrl);
     const quoteData = await quoteResponse.json();
     console.log('Quote data:', quoteData);
 
-    // Check for API errors or rate limits
-    if (quoteData['Error Message']) {
-      console.error('Alpha Vantage error:', quoteData['Error Message']);
+    // Check for API errors
+    if (quoteData.status === 'error') {
+      console.error('Indian Stock API error:', quoteData.message);
       return new Response(
-        JSON.stringify({ error: quoteData['Error Message'] }),
+        JSON.stringify({ error: quoteData.message || 'Unable to fetch stock data' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (quoteData['Note']) {
-      console.error('Alpha Vantage rate limit:', quoteData['Note']);
-      return new Response(
-        JSON.stringify({ error: 'API rate limit reached. Please try again later.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Check if data is valid
-    if (!quoteData['Global Quote'] || Object.keys(quoteData['Global Quote']).length === 0) {
+    if (!quoteData.data) {
       console.error('No quote data found for symbol:', symbol);
       return new Response(
-        JSON.stringify({ error: `No data available for symbol ${symbol}. Make sure to use the correct ticker symbol.` }),
+        JSON.stringify({ error: `No data available for symbol ${symbol}. Try using format like TCS.NS for NSE or TCS.BO for BSE.` }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const quote = quoteData['Global Quote'];
-    const currentPrice = parseFloat(quote['05. price']);
-    const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
+    const stockInfo = quoteData.data;
+    const currentPrice = stockInfo.last_price;
+    const changePercent = stockInfo.percent_change;
 
     // Calculate prediction based on holding period and current trend
     const periodMultipliers: Record<string, number> = {
