@@ -15,40 +15,48 @@ serve(async (req) => {
     const { symbol, holdingPeriod } = await req.json();
     console.log('Analyzing stock:', symbol, 'for period:', holdingPeriod);
 
-    const FINNHUB_API_KEY = Deno.env.get('FINNHUB_API_KEY');
-    if (!FINNHUB_API_KEY) {
-      throw new Error('FINNHUB_API_KEY is not configured');
+    const ALPHA_VANTAGE_API_KEY = Deno.env.get('ALPHA_VANTAGE_API_KEY');
+    if (!ALPHA_VANTAGE_API_KEY) {
+      throw new Error('ALPHA_VANTAGE_API_KEY is not configured');
     }
 
-    // Add .NS suffix for Indian NSE stocks
-    const finnhubSymbol = symbol.includes('.') ? symbol : `${symbol}.NS`;
-    
-    // Fetch current quote from Finnhub
-    const quoteUrl = `https://finnhub.io/api/v1/quote?symbol=${finnhubSymbol}&token=${FINNHUB_API_KEY}`;
-    console.log('Fetching stock data for:', finnhubSymbol);
+    // Fetch current quote from Alpha Vantage
+    const quoteUrl = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${ALPHA_VANTAGE_API_KEY}`;
+    console.log('Fetching stock data for:', symbol);
     
     const quoteResponse = await fetch(quoteUrl);
     const quoteData = await quoteResponse.json();
     console.log('Quote data:', quoteData);
 
-    if (quoteData.error) {
+    // Check for API errors or rate limits
+    if (quoteData['Error Message']) {
+      console.error('Alpha Vantage error:', quoteData['Error Message']);
       return new Response(
-        JSON.stringify({ error: quoteData.error }),
+        JSON.stringify({ error: quoteData['Error Message'] }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Check if data is valid (current price exists)
-    if (!quoteData.c || quoteData.c === 0) {
-      console.error('No quote data found for symbol:', finnhubSymbol);
+    if (quoteData['Note']) {
+      console.error('Alpha Vantage rate limit:', quoteData['Note']);
       return new Response(
-        JSON.stringify({ error: `No data available for symbol ${symbol}. Make sure to use the correct ticker symbol (e.g., RELIANCE for Reliance Industries).` }),
+        JSON.stringify({ error: 'API rate limit reached. Please try again later.' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if data is valid
+    if (!quoteData['Global Quote'] || Object.keys(quoteData['Global Quote']).length === 0) {
+      console.error('No quote data found for symbol:', symbol);
+      return new Response(
+        JSON.stringify({ error: `No data available for symbol ${symbol}. Make sure to use the correct ticker symbol.` }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const currentPrice = quoteData.c;
-    const changePercent = quoteData.dp;
+    const quote = quoteData['Global Quote'];
+    const currentPrice = parseFloat(quote['05. price']);
+    const changePercent = parseFloat(quote['10. change percent'].replace('%', ''));
 
     // Calculate prediction based on holding period and current trend
     const periodMultipliers: Record<string, number> = {
