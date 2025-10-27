@@ -1,6 +1,6 @@
 stock_symbol,stock_name,quantity,buy_price
-AAPL,Apple Inc.,10,150.50
-GOOGL,Alphabet Inc.,5,2800.00
-MSFT,Microsoft Corporation,15,320.75
-TSLA,Tesla Inc.,8,245.30
-AMZN,Amazon.com Inc.,3,3350.00
+TCS,Tata Consultancy Services,10,3200.50
+RELIANCE,Reliance Industries,5,2400.00
+INFY,Infosys,15,1450.75
+HDFCBANK,HDFC Bank,8,1650.30
+WIPRO,Wipro Limited,20,425.00

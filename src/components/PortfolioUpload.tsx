@@ -51,10 +51,21 @@ const PortfolioUpload = ({
         if (!line) continue;
         
         const parts = line.split(',').map(p => p.trim());
+        // Support both formats: Symbol,Quantity,AvgPrice OR Symbol,Name,Quantity,AvgPrice
         if (parts.length >= 3) {
           const symbol = parts[0].replace(/['"]/g, '').trim();
-          const quantity = parseInt(parts[1]);
-          const avgPrice = parseFloat(parts[2]);
+          let quantity: number;
+          let avgPrice: number;
+          
+          if (parts.length >= 4) {
+            // Format: Symbol,Name,Quantity,AvgPrice (like the template)
+            quantity = parseInt(parts[2]);
+            avgPrice = parseFloat(parts[3]);
+          } else {
+            // Format: Symbol,Quantity,AvgPrice
+            quantity = parseInt(parts[1]);
+            avgPrice = parseFloat(parts[2]);
+          }
           
           if (symbol && !isNaN(quantity) && !isNaN(avgPrice)) {
             portfolioData.push({ symbol, quantity, avgPrice });
