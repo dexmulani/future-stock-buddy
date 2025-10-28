@@ -3,9 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Upload, FileText, Share2, AlertTriangle } from "lucide-react";
+import { Upload, FileText, Share2, AlertTriangle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { createWorker } from 'tesseract.js';
 interface PortfolioStock {
   symbol: string;
   quantity: number;
@@ -20,9 +21,38 @@ const PortfolioUpload = ({
 }: PortfolioUploadProps) => {
   const [portfolioText, setPortfolioText] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
+    if (!file) return;
+
+    // Check if it's an image file
+    if (file.type.startsWith('image/')) {
+      setIsProcessingImage(true);
+      toast.info("Processing screenshot with OCR...");
+      
+      try {
+        const worker = await createWorker('eng');
+        const { data: { text } } = await worker.recognize(file);
+        await worker.terminate();
+        
+        // Process the OCR text to extract portfolio data
+        const extractedData = extractPortfolioFromOCR(text);
+        if (extractedData) {
+          setPortfolioText(extractedData);
+          toast.success("Screenshot analyzed successfully! Review the extracted data and click 'Analyze Portfolio'.");
+        } else {
+          toast.error("Could not extract portfolio data from screenshot. Please ensure the image contains stock symbol, quantity, and price information.");
+        }
+      } catch (error) {
+        console.error('OCR Error:', error);
+        toast.error("Failed to process screenshot. Please try a clearer image or use CSV format.");
+      } finally {
+        setIsProcessingImage(false);
+      }
+    } else {
+      // Handle text-based files (CSV, TXT, etc.)
       const reader = new FileReader();
       reader.onload = e => {
         const content = e.target?.result as string;
@@ -31,6 +61,32 @@ const PortfolioUpload = ({
       };
       reader.readAsText(file);
     }
+  };
+
+  const extractPortfolioFromOCR = (ocrText: string): string | null => {
+    // Try to extract stock data from OCR text
+    // Look for patterns like: SYMBOL QUANTITY PRICE or SYMBOL NAME QUANTITY PRICE
+    const lines = ocrText.split('\n').filter(line => line.trim());
+    const extractedData: string[] = ['stock_symbol,stock_name,quantity,buy_price'];
+    
+    for (const line of lines) {
+      // Match patterns with stock symbols (typically 2-10 capital letters)
+      const match = line.match(/([A-Z]{2,10})\s+([A-Za-z\s]+)?\s+(\d+)\s+(\d+\.?\d*)/);
+      if (match) {
+        const [, symbol, name, quantity, price] = match;
+        extractedData.push(`${symbol},${name || symbol},${quantity},${price}`);
+      }
+    }
+    
+    return extractedData.length > 1 ? extractedData.join('\n') : null;
+  };
+
+  const downloadSampleCSV = () => {
+    const link = document.createElement('a');
+    link.href = '/portfolio_template.csv';
+    link.download = 'portfolio_template.csv';
+    link.click();
+    toast.success("Sample CSV downloaded! Fill it with your portfolio data and upload.");
   };
   const loadSampleData = () => {
     const sampleData = `stock_symbol,stock_name,quantity,buy_price
@@ -158,28 +214,55 @@ WIPRO,Wipro Limited,20,425.00`;
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <label className="text-sm font-medium flex items-center gap-2">
-            <Upload className="h-4 w-4 text-primary" />
-            Upload Portfolio File or Screenshot
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Upload className="h-4 w-4 text-primary" />
+              Upload Portfolio File or Screenshot
+            </label>
+            <Button onClick={downloadSampleCSV} variant="ghost" size="sm" className="text-xs">
+              <Download className="h-3 w-3 mr-1" />
+              Download CSV Template
+            </Button>
+          </div>
           <div className="relative group">
-            <Input type="file" accept=".csv,.xlsx,.txt,.pdf,image/*" onChange={handleFileUpload} className="file:mr-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors mx-0 px-[15px] py-[8px]" />
+            <Input 
+              type="file" 
+              accept=".csv,.xlsx,.txt,.pdf,image/*" 
+              onChange={handleFileUpload} 
+              disabled={isProcessingImage || isAnalyzing}
+              className="file:mr-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:transition-colors cursor-pointer hover:border-primary/50 transition-colors mx-0 px-[15px] py-[8px]" 
+            />
             <FileText className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </div>
           <p className="text-xs text-muted-foreground">
-            Supported formats: CSV, Excel (.xlsx), PDF, Text files, Screenshots (JPG, PNG, etc.)
+            Supported formats: CSV, Excel (.xlsx), Text files, or Screenshots (JPG, PNG) - AI will extract data from images
           </p>
         </div>
 
+        {portfolioText && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Extracted Portfolio Data (Review & Edit)</label>
+            <Textarea 
+              value={portfolioText}
+              onChange={(e) => setPortfolioText(e.target.value)}
+              placeholder="Portfolio data will appear here..."
+              className="min-h-[150px] font-mono text-xs"
+            />
+          </div>
+        )}
+
         <div className="flex gap-3">
-          <Button onClick={loadSampleData} variant="outline" disabled={isAnalyzing} className="flex-1">
+          <Button onClick={loadSampleData} variant="outline" disabled={isAnalyzing || isProcessingImage} className="flex-1">
             <FileText className="h-4 w-4 mr-2" />
             Load Sample Data
           </Button>
-          <Button onClick={analyzePortfolio} disabled={isAnalyzing} className="flex-1">
+          <Button onClick={analyzePortfolio} disabled={isAnalyzing || isProcessingImage || !portfolioText} className="flex-1">
             {isAnalyzing ? <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
                 Analyzing Portfolio...
+              </> : isProcessingImage ? <>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                Processing Image...
               </> : <>
                 <AlertTriangle className="h-4 w-4 mr-2" />
                 Analyze Portfolio
