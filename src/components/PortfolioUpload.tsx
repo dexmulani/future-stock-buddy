@@ -32,6 +32,17 @@ const PortfolioUpload = ({
       reader.readAsText(file);
     }
   };
+  const loadSampleData = () => {
+    const sampleData = `stock_symbol,stock_name,quantity,buy_price
+TCS,Tata Consultancy Services,10,3200.50
+RELIANCE,Reliance Industries,5,2400.00
+INFY,Infosys,15,1450.75
+HDFCBANK,HDFC Bank,8,1650.30
+WIPRO,Wipro Limited,20,425.00`;
+    setPortfolioText(sampleData);
+    toast.success("Sample portfolio data loaded! Click 'Analyze Portfolio' to see results.");
+  };
+
   const analyzePortfolio = async () => {
     if (!portfolioText.trim()) {
       toast.error("Please upload a portfolio file or photo first");
@@ -161,6 +172,10 @@ const PortfolioUpload = ({
         </div>
 
         <div className="flex gap-3">
+          <Button onClick={loadSampleData} variant="outline" disabled={isAnalyzing} className="flex-1">
+            <FileText className="h-4 w-4 mr-2" />
+            Load Sample Data
+          </Button>
           <Button onClick={analyzePortfolio} disabled={isAnalyzing} className="flex-1">
             {isAnalyzing ? <>
                 <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
