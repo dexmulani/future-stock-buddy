@@ -37,13 +37,17 @@ const PortfolioUpload = ({
         const { data: { text } } = await worker.recognize(file);
         await worker.terminate();
         
+        console.log('OCR Raw Text:', text);
+        
         // Process the OCR text to extract portfolio data
         const extractedData = extractPortfolioFromOCR(text);
+        console.log('Extracted Data:', extractedData);
+        
         if (extractedData) {
           setPortfolioText(extractedData);
           toast.success("Screenshot analyzed successfully! Review the extracted data and click 'Analyze Portfolio'.");
         } else {
-          toast.error("Could not extract portfolio data from screenshot. Please ensure the image contains stock symbol, quantity, and price information.");
+          toast.error("Could not extract portfolio data from screenshot. Please ensure the image contains stock information in format: 'Company Name' followed by 'X shares • Avg. ₹YY.YY'");
         }
       } catch (error) {
         console.error('OCR Error:', error);
@@ -66,30 +70,69 @@ const PortfolioUpload = ({
   const extractPortfolioFromOCR = (ocrText: string): string | null => {
     // Extract portfolio data from Groww-style format
     // Format: Company Name followed by "X shares • Avg. ₹YY.YY"
-    const lines = ocrText.split('\n').filter(line => line.trim());
+    const lines = ocrText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const extractedData: string[] = ['stock_symbol,stock_name,quantity,buy_price'];
     
-    for (let i = 0; i < lines.length - 1; i++) {
-      const currentLine = lines[i].trim();
-      const nextLine = lines[i + 1].trim();
+    console.log('Total lines found:', lines.length);
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
       
-      // Look for pattern: "X shares • Avg. ₹YY.YY" or "X share • Avg. ₹YY.YY"
-      const shareMatch = nextLine.match(/(\d+)\s+shares?\s+[•·]\s+Avg\.\s+[₹Rs\.?\s]*(\d+\.?\d*)/i);
+      // Try multiple patterns to match the share information
+      // Pattern 1: "X shares • Avg. ₹YY.YY" or "X share • Avg. ₹YY.YY"
+      let shareMatch = line.match(/(\d+)\s+shares?\s*[•·*]\s*Avg[.\s]*[₹Rs.]*\s*(\d+\.?\d*)/i);
       
-      if (shareMatch && currentLine.length > 0) {
-        const [, quantity, avgPrice] = shareMatch;
-        // Current line is the company name
-        const companyName = currentLine.replace(/[^\w\s&-]/g, '').trim();
+      // Pattern 2: More flexible - any line with number + "share" + number
+      if (!shareMatch) {
+        shareMatch = line.match(/(\d+)\s+share[s]?\s+.*?(\d+[.,]\d+)/i);
+      }
+      
+      if (shareMatch) {
+        const quantity = shareMatch[1];
+        const avgPrice = shareMatch[2].replace(',', '.');
         
-        // Create a symbol from company name (first word in uppercase)
-        const symbol = companyName.split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
+        // Look for company name in previous lines (within 3 lines above)
+        let companyName = '';
+        for (let j = Math.max(0, i - 3); j < i; j++) {
+          const prevLine = lines[j];
+          // Company names typically have letters and spaces, exclude lines with mainly numbers or symbols
+          if (prevLine && prevLine.length > 2 && /[A-Za-z]{3,}/.test(prevLine) && 
+              !prevLine.match(/shares?|avg|current|market|price|₹|portfolio/i)) {
+            companyName = prevLine;
+            break;
+          }
+        }
         
-        if (symbol && quantity && avgPrice) {
-          extractedData.push(`${symbol},${companyName},${quantity},${avgPrice}`);
+        // If no company name found above, check if the same line has it before the share info
+        if (!companyName) {
+          const beforeMatch = line.substring(0, line.indexOf(shareMatch[0])).trim();
+          if (beforeMatch && beforeMatch.length > 2) {
+            companyName = beforeMatch;
+          }
+        }
+        
+        if (companyName) {
+          // Clean company name
+          companyName = companyName.replace(/[^\w\s&-]/g, '').trim();
+          
+          // Create symbol from company name (first significant word)
+          const words = companyName.split(/\s+/);
+          let symbol = words[0].toUpperCase().replace(/[^A-Z]/g, '');
+          
+          // If symbol is too short, try to combine first few words
+          if (symbol.length < 2 && words.length > 1) {
+            symbol = words.slice(0, 2).join('').toUpperCase().replace(/[^A-Z]/g, '');
+          }
+          
+          if (symbol && symbol.length >= 2 && quantity && avgPrice) {
+            console.log(`Found: ${symbol}, ${companyName}, ${quantity}, ${avgPrice}`);
+            extractedData.push(`${symbol},${companyName},${quantity},${avgPrice}`);
+          }
         }
       }
     }
     
+    console.log('Extracted entries:', extractedData.length - 1);
     return extractedData.length > 1 ? extractedData.join('\n') : null;
   };
 
