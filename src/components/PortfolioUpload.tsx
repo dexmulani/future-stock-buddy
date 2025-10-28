@@ -64,17 +64,29 @@ const PortfolioUpload = ({
   };
 
   const extractPortfolioFromOCR = (ocrText: string): string | null => {
-    // Try to extract stock data from OCR text
-    // Look for patterns like: SYMBOL QUANTITY PRICE or SYMBOL NAME QUANTITY PRICE
+    // Extract portfolio data from Groww-style format
+    // Format: Company Name followed by "X shares • Avg. ₹YY.YY"
     const lines = ocrText.split('\n').filter(line => line.trim());
     const extractedData: string[] = ['stock_symbol,stock_name,quantity,buy_price'];
     
-    for (const line of lines) {
-      // Match patterns with stock symbols (typically 2-10 capital letters)
-      const match = line.match(/([A-Z]{2,10})\s+([A-Za-z\s]+)?\s+(\d+)\s+(\d+\.?\d*)/);
-      if (match) {
-        const [, symbol, name, quantity, price] = match;
-        extractedData.push(`${symbol},${name || symbol},${quantity},${price}`);
+    for (let i = 0; i < lines.length - 1; i++) {
+      const currentLine = lines[i].trim();
+      const nextLine = lines[i + 1].trim();
+      
+      // Look for pattern: "X shares • Avg. ₹YY.YY" or "X share • Avg. ₹YY.YY"
+      const shareMatch = nextLine.match(/(\d+)\s+shares?\s+[•·]\s+Avg\.\s+[₹Rs\.?\s]*(\d+\.?\d*)/i);
+      
+      if (shareMatch && currentLine.length > 0) {
+        const [, quantity, avgPrice] = shareMatch;
+        // Current line is the company name
+        const companyName = currentLine.replace(/[^\w\s&-]/g, '').trim();
+        
+        // Create a symbol from company name (first word in uppercase)
+        const symbol = companyName.split(' ')[0].toUpperCase().replace(/[^A-Z]/g, '');
+        
+        if (symbol && quantity && avgPrice) {
+          extractedData.push(`${symbol},${companyName},${quantity},${avgPrice}`);
+        }
       }
     }
     
