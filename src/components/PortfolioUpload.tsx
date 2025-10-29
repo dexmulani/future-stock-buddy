@@ -134,24 +134,42 @@ const PortfolioUpload = ({
             continue;
           }
           
-          // Extract symbol: use first significant word, uppercase
+          // Extract and clean symbol
           const words = companyName.split(/\s+/).filter(w => w.length > 1);
-          let symbol = words[0]?.toUpperCase().replace(/[^A-Z]/g, '') || '';
           
           // Common stock symbol mappings for Indian stocks
           const symbolMappings: { [key: string]: string } = {
             'BHARAT': 'BEL',
             'BHARATELECTRONICS': 'BEL',
-            'GROWW': 'GROWWNIFTY',
+            'BHARATELECTRONICSWE': 'BEL',
+            'BHARATELECTRONICSLIMITED': 'BEL',
+            'GROWW': 'NIFTYBEES',
+            'GROWWNIFTY': 'NIFTYBEES',
+            'GROWWNIFTYINDIA': 'NIFTYBEES',
+            'GROWWNIFTYINDIADEFENCE': 'NIFTYBEES',
             'SUZLON': 'SUZLON',
+            'SUZLONENERGY': 'SUZLON',
             'RELIANCE': 'RELIANCE',
             'RELIANCEPOWER': 'RPOWER',
-            'NHPC': 'NHPC'
+            'RELIANCEPOWERWE': 'RPOWER',
+            'NHPC': 'NHPC',
+            'NHPCAG': 'NHPC',
+            'TATA': 'TATAMOTORS',
+            'TATAMOTORS': 'TATAMOTORS',
+            'TATAMOTORSWE': 'TATAMOTORS'
           };
           
-          // Try to find better symbol match
+          // Try multiple matching strategies
           const cleanName = companyName.toUpperCase().replace(/[^A-Z]/g, '');
-          symbol = symbolMappings[cleanName] || symbolMappings[symbol] || symbol;
+          const firstWord = words[0]?.toUpperCase().replace(/[^A-Z]/g, '') || '';
+          const firstTwoWords = words.slice(0, 2).join('').toUpperCase().replace(/[^A-Z]/g, '');
+          
+          // Match in order of preference: full clean name, first two words, first word, or remove spaces
+          let symbol = symbolMappings[cleanName] || 
+                      symbolMappings[firstTwoWords] || 
+                      symbolMappings[firstWord] || 
+                      cleanName.replace(/\s+/g, '') || 
+                      firstWord;
           
           // Validate: symbol must be 2-15 chars, quantity and price must be valid
           if (symbol.length >= 2 && 
