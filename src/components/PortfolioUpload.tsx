@@ -68,63 +68,98 @@ const PortfolioUpload = ({
   };
 
   const extractPortfolioFromOCR = (ocrText: string): string | null => {
-    // Extract portfolio data from Groww-style format
-    // Format: Company Name followed by "X shares • Avg. ₹YY.YY"
     const lines = ocrText.split('\n').map(line => line.trim()).filter(line => line.length > 0);
     const extractedData: string[] = ['stock_symbol,stock_name,quantity,buy_price'];
+    
+    // UI text patterns to exclude
+    const excludePatterns = [
+      /select\s+a\s+stock/i,
+      /add\s+money/i,
+      /balance/i,
+      /current\s+value/i,
+      /invested\s+value/i,
+      /returns/i,
+      /portfolio/i,
+      /nifty|sensex|banknifty/i,
+      /explore|holdings|positions|orders|watchlist/i,
+      /stocks|terminal|trade/i
+    ];
     
     console.log('Total lines found:', lines.length);
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       
-      // Try multiple patterns to match the share information
-      // Pattern 1: "X shares • Avg. ₹YY.YY" or "X share • Avg. ₹YY.YY"
-      let shareMatch = line.match(/(\d+)\s+shares?\s*[•·*]\s*Avg[.\s]*[₹Rs.]*\s*(\d+\.?\d*)/i);
-      
-      // Pattern 2: More flexible - any line with number + "share" + number
-      if (!shareMatch) {
-        shareMatch = line.match(/(\d+)\s+share[s]?\s+.*?(\d+[.,]\d+)/i);
-      }
+      // Match: "X shares • Avg. ₹YY.YY" pattern (with various separators)
+      const shareMatch = line.match(/(\d{1,4})\s+shares?\s*[•·+*]\s*Avg[.\s]*[₹Rs.\s]*(\d{1,6}[.,]?\d{0,2})/i);
       
       if (shareMatch) {
-        const quantity = shareMatch[1];
-        const avgPrice = shareMatch[2].replace(',', '.');
+        const quantity = parseInt(shareMatch[1]);
+        let avgPrice = parseFloat(shareMatch[2].replace(',', '.'));
         
-        // Look for company name in previous lines (within 3 lines above)
+        // Skip if values look unrealistic
+        if (quantity > 10000 || avgPrice > 100000 || avgPrice < 0.01) {
+          continue;
+        }
+        
+        // Look for company/stock name in previous 1-2 lines
         let companyName = '';
-        for (let j = Math.max(0, i - 3); j < i; j++) {
-          const prevLine = lines[j];
-          // Company names typically have letters and spaces, exclude lines with mainly numbers or symbols
-          if (prevLine && prevLine.length > 2 && /[A-Za-z]{3,}/.test(prevLine) && 
-              !prevLine.match(/shares?|avg|current|market|price|₹|portfolio/i)) {
+        for (let j = Math.max(0, i - 2); j < i; j++) {
+          const prevLine = lines[j].trim();
+          
+          // Skip if line matches exclude patterns
+          if (excludePatterns.some(pattern => pattern.test(prevLine))) {
+            continue;
+          }
+          
+          // Valid company name: has letters, not too many numbers, reasonable length
+          if (prevLine.length >= 3 && 
+              prevLine.length <= 50 &&
+              /[A-Za-z]{3,}/.test(prevLine) &&
+              !prevLine.match(/shares?|avg|₹|price|value|returns/i)) {
             companyName = prevLine;
             break;
           }
         }
         
-        // If no company name found above, check if the same line has it before the share info
-        if (!companyName) {
-          const beforeMatch = line.substring(0, line.indexOf(shareMatch[0])).trim();
-          if (beforeMatch && beforeMatch.length > 2) {
-            companyName = beforeMatch;
-          }
-        }
-        
         if (companyName) {
-          // Clean company name
-          companyName = companyName.replace(/[^\w\s&-]/g, '').trim();
+          // Clean company name: remove special chars, extra spaces
+          companyName = companyName
+            .replace(/[~•·*+\d%₹]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
           
-          // Create symbol from company name (first significant word)
-          const words = companyName.split(/\s+/);
-          let symbol = words[0].toUpperCase().replace(/[^A-Z]/g, '');
-          
-          // If symbol is too short, try to combine first few words
-          if (symbol.length < 2 && words.length > 1) {
-            symbol = words.slice(0, 2).join('').toUpperCase().replace(/[^A-Z]/g, '');
+          // Skip if company name matches exclude patterns
+          if (excludePatterns.some(pattern => pattern.test(companyName))) {
+            continue;
           }
           
-          if (symbol && symbol.length >= 2 && quantity && avgPrice) {
+          // Extract symbol: use first significant word, uppercase
+          const words = companyName.split(/\s+/).filter(w => w.length > 1);
+          let symbol = words[0]?.toUpperCase().replace(/[^A-Z]/g, '') || '';
+          
+          // Common stock symbol mappings for Indian stocks
+          const symbolMappings: { [key: string]: string } = {
+            'BHARAT': 'BEL',
+            'BHARATELECTRONICS': 'BEL',
+            'GROWW': 'GROWWNIFTY',
+            'SUZLON': 'SUZLON',
+            'RELIANCE': 'RELIANCE',
+            'RELIANCEPOWER': 'RPOWER',
+            'NHPC': 'NHPC'
+          };
+          
+          // Try to find better symbol match
+          const cleanName = companyName.toUpperCase().replace(/[^A-Z]/g, '');
+          symbol = symbolMappings[cleanName] || symbolMappings[symbol] || symbol;
+          
+          // Validate: symbol must be 2-15 chars, quantity and price must be valid
+          if (symbol.length >= 2 && 
+              symbol.length <= 15 && 
+              quantity > 0 && 
+              quantity <= 10000 &&
+              avgPrice > 0 && 
+              avgPrice <= 100000) {
             console.log(`Found: ${symbol}, ${companyName}, ${quantity}, ${avgPrice}`);
             extractedData.push(`${symbol},${companyName},${quantity},${avgPrice}`);
           }
