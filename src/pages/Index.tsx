@@ -60,7 +60,9 @@ const Index = () => {
 
       if (error) {
         console.error('Analysis error:', error);
-        toast.error('Failed to analyze stock. Please check the symbol and try again.');
+        // Try to extract error message from the response
+        const errorMessage = data?.error || error.message || 'Failed to analyze stock. Please check the symbol and try again.';
+        toast.error(errorMessage);
         setIsLoading(false);
         return;
       }
