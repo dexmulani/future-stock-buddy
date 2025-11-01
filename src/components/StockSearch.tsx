@@ -5,6 +5,74 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, TrendingUp, IndianRupee } from "lucide-react";
 
+// Map common company names to ticker symbols
+const symbolMappings: Record<string, string> = {
+  'TATA MOTORS': 'TATAMOTORS',
+  'TATA STEEL': 'TATASTEEL',
+  'TATA POWER': 'TATAPOWER',
+  'TATA CONSUMER': 'TATACONSUM',
+  'RELIANCE': 'RELIANCE',
+  'RELIANCE INDUSTRIES': 'RELIANCE',
+  'INFOSYS': 'INFY',
+  'TCS': 'TCS',
+  'TATA CONSULTANCY': 'TCS',
+  'WIPRO': 'WIPRO',
+  'HDFC BANK': 'HDFCBANK',
+  'ICICI BANK': 'ICICIBANK',
+  'STATE BANK': 'SBIN',
+  'SBI': 'SBIN',
+  'AXIS BANK': 'AXISBANK',
+  'KOTAK BANK': 'KOTAKBANK',
+  'BHARTI AIRTEL': 'BHARTIARTL',
+  'AIRTEL': 'BHARTIARTL',
+  'ITC': 'ITC',
+  'HINDUSTAN UNILEVER': 'HINDUNILVR',
+  'HUL': 'HINDUNILVR',
+  'MARUTI': 'MARUTI',
+  'MARUTI SUZUKI': 'MARUTI',
+  'ASIAN PAINTS': 'ASIANPAINT',
+  'BAJAJ FINANCE': 'BAJFINANCE',
+  'BAJAJ AUTO': 'BAJAJ-AUTO',
+  'LARSEN': 'LT',
+  'L&T': 'LT',
+  'LARSEN TOUBRO': 'LT',
+  'ADANI': 'ADANIENT',
+  'ADANI ENTERPRISES': 'ADANIENT',
+  'MAHINDRA': 'M&M',
+  'M&M': 'M&M',
+  'TITAN': 'TITAN',
+  'TITAN COMPANY': 'TITAN',
+  'SUN PHARMA': 'SUNPHARMA',
+  'DR REDDY': 'DRREDDY',
+  'CIPLA': 'CIPLA',
+  'NESTLE': 'NESTLEIND',
+  'NESTLE INDIA': 'NESTLEIND',
+  'POWER GRID': 'POWERGRID',
+  'NTPC': 'NTPC',
+  'ONGC': 'ONGC',
+  'COAL INDIA': 'COALINDIA',
+  'JSW STEEL': 'JSWSTEEL',
+  'ULTRATECH': 'ULTRACEMCO',
+  'ULTRATECH CEMENT': 'ULTRACEMCO',
+  'GRASIM': 'GRASIM',
+  'TECH MAHINDRA': 'TECHM',
+  'HCL TECH': 'HCLTECH',
+  'HCL': 'HCLTECH',
+};
+
+// Normalize symbol: remove spaces, convert to uppercase, and map to ticker
+const normalizeSymbol = (input: string): string => {
+  const cleaned = input.trim().toUpperCase();
+  
+  // Check if it matches a known company name
+  if (symbolMappings[cleaned]) {
+    return symbolMappings[cleaned];
+  }
+  
+  // Remove spaces and special characters for direct ticker input
+  return cleaned.replace(/\s+/g, '').replace(/[^A-Z0-9&]/g, '');
+};
+
 interface StockSearchProps {
   onPredict: (symbol: string, holdingPeriod: string) => void;
   isLoading?: boolean;
@@ -17,7 +85,8 @@ const StockSearch = ({ onPredict, isLoading = false }: StockSearchProps) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (symbol.trim()) {
-      onPredict(symbol.toUpperCase(), holdingPeriod);
+      const normalizedSymbol = normalizeSymbol(symbol);
+      onPredict(normalizedSymbol, holdingPeriod);
     }
   };
 
@@ -35,10 +104,10 @@ const StockSearch = ({ onPredict, isLoading = false }: StockSearchProps) => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               type="text"
-              placeholder="Enter stock name (e.g., RELIANCE)"
+              placeholder="e.g., Tata Motors, Reliance, INFY"
               value={symbol}
               onChange={(e) => setSymbol(e.target.value)}
-              className="pl-10 text-center font-mono text-lg"
+              className="pl-10"
               disabled={isLoading}
             />
           </div>
