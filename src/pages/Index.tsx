@@ -52,28 +52,38 @@ const Index = () => {
 
   const handlePredict = async (symbol: string, holdingPeriod: string) => {
     setIsLoading(true);
+    setPrediction(null); // Clear previous prediction
     
     try {
+      console.log('Analyzing stock:', symbol, holdingPeriod);
       const { data, error } = await supabase.functions.invoke('analyze-stock', {
         body: { symbol, holdingPeriod }
       });
 
+      console.log('Response:', { data, error });
+
       if (error) {
-        console.error('Analysis error:', error);
-        // Try to extract error message from the response
-        const errorMessage = data?.error || error.message || 'Failed to analyze stock. Please check the symbol and try again.';
-        toast.error(errorMessage);
+        console.error('Supabase function error:', error);
+        toast.error(error.message || 'Failed to analyze stock. Please try again.');
         setIsLoading(false);
         return;
       }
 
       if (data?.error) {
-        console.error('Analysis data error:', data.error);
-        toast.error(data.error);
+        console.error('Analysis returned error:', data.error);
+        toast.error(data.error, { duration: 5000 });
         setIsLoading(false);
         return;
       }
 
+      if (!data) {
+        console.error('No data returned from analysis');
+        toast.error('No data returned. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('Analysis successful:', data);
       setPrediction(data);
       toast.success(`Stock analysis completed for ${symbol}!`);
     } catch (error) {
