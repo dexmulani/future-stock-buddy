@@ -27,9 +27,11 @@ serve(async (req) => {
     // Check for API errors
     if (quoteData.status === 'error') {
       console.error('Indian Stock API error:', quoteData.message);
+      const errorMsg = quoteData.message || 'Unable to fetch stock data';
+      const hint = quoteData.hint ? ` ${quoteData.hint}` : '';
       return new Response(
-        JSON.stringify({ error: quoteData.message || 'Unable to fetch stock data' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: `${errorMsg}${hint}` }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -38,7 +40,7 @@ serve(async (req) => {
       console.error('No quote data found for symbol:', symbol);
       return new Response(
         JSON.stringify({ error: `No data available for symbol ${symbol}. Try using format like TCS.NS for NSE or TCS.BO for BSE.` }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
