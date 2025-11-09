@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      daily_predictions: {
+        Row: {
+          change: number | null
+          change_percent: number | null
+          confidence: number
+          created_at: string
+          current_price: number | null
+          expected_move: number
+          id: string
+          mode: string
+          reason: string
+          symbol: string
+          trading_date: string
+          updated_at: string
+        }
+        Insert: {
+          change?: number | null
+          change_percent?: number | null
+          confidence: number
+          created_at?: string
+          current_price?: number | null
+          expected_move: number
+          id?: string
+          mode: string
+          reason: string
+          symbol: string
+          trading_date: string
+          updated_at?: string
+        }
+        Update: {
+          change?: number | null
+          change_percent?: number | null
+          confidence?: number
+          created_at?: string
+          current_price?: number | null
+          expected_move?: number
+          id?: string
+          mode?: string
+          reason?: string
+          symbol?: string
+          trading_date?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      market_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          holiday_name: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          holiday_name: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          holiday_name?: string
+          id?: string
+        }
+        Relationships: []
+      }
       portfolio_stocks: {
         Row: {
           buy_price: number
@@ -166,6 +232,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stock_data: {
+        Row: {
+          close_price: number | null
+          data: string
+          high_price: number | null
+          id: number
+          low_price: number | null
+          open_price: number | null
+          prediction: string
+          sentiment_score: number
+          stock_symbol: string | null
+          volume: number | null
+        }
+        Insert: {
+          close_price?: number | null
+          data: string
+          high_price?: number | null
+          id?: number
+          low_price?: number | null
+          open_price?: number | null
+          prediction: string
+          sentiment_score: number
+          stock_symbol?: string | null
+          volume?: number | null
+        }
+        Update: {
+          close_price?: number | null
+          data?: string
+          high_price?: number | null
+          id?: number
+          low_price?: number | null
+          open_price?: number | null
+          prediction?: string
+          sentiment_score?: number
+          stock_symbol?: string | null
+          volume?: number | null
+        }
+        Relationships: []
       }
       Stocks_table: {
         Row: {
