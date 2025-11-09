@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.analyze-stock]
 verify_jwt = false
+
+[functions.daily-predictions]
+verify_jwt = false

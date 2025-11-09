@@ -4,6 +4,7 @@ import StockSearch from "@/components/StockSearch";
 import PredictionCard from "@/components/PredictionCard";
 import PortfolioUpload from "@/components/PortfolioUpload";
 import PortfolioHealth from "@/components/PortfolioHealth";
+import DailyPredictions from "@/components/DailyPredictions";
 import { Button } from "@/components/ui/button";
 import { Brain, Zap, Shield, TrendingUp } from "lucide-react";
 import heroImage from "@/assets/stock-hero.jpg";
@@ -132,6 +133,9 @@ const Index = () => {
           </Button>
         </div>
       </section>
+
+      {/* Daily Predictions Section */}
+      <DailyPredictions />
 
       {/* Features Section */}
       <section className="py-16 px-4 bg-gradient-secondary">
