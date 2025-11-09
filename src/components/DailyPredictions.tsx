@@ -65,11 +65,11 @@ const DailyPredictions = () => {
           <div className="flex items-center justify-center gap-2 mb-4">
             <Sparkles className="h-8 w-8 text-accent animate-pulse" />
             <h2 className="text-3xl md:text-4xl font-bold text-primary">
-              Today's Top Movers
+              Daily Stock Predictions
             </h2>
           </div>
           <p className="text-lg text-muted-foreground mb-6">
-            AI-powered predictions for today's market opportunities
+            AI-curated bullish and bearish stocks for today's trading opportunities
           </p>
           
           <div className="flex gap-3 justify-center">

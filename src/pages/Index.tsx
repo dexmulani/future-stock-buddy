@@ -134,9 +134,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Daily Predictions Section */}
-      <DailyPredictions />
-
       {/* Features Section */}
       <section className="py-16 px-4 bg-gradient-secondary">
         <div className="max-w-6xl mx-auto">
@@ -148,26 +145,29 @@ const Index = () => {
               <Brain className="h-12 w-12 text-accent mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">AI-Powered Analysis</h3>
               <p className="text-muted-foreground">
-                Advanced algorithms analyze Indian market patterns and provide actionable insights
+                Advanced algorithms analyze Indian market patterns and provide actionable insights for any stock
               </p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
               <Zap className="h-12 w-12 text-accent mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Custom Holding Periods</h3>
+              <h3 className="text-xl font-semibold mb-2">Daily Market Picks</h3>
               <p className="text-muted-foreground">
-                Analyze stocks for various timeframes from 1 day to 1 year investment horizons
+                Get AI-curated bullish and bearish stock predictions updated daily to help you make informed decisions
               </p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
               <Shield className="h-12 w-12 text-accent mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">Buy/Sell Signals</h3>
               <p className="text-muted-foreground">
-                Clear recommendations with risk assessment and stop-loss suggestions
+                Clear recommendations with risk assessment and stop-loss suggestions for smarter trading
               </p>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Daily Predictions Section */}
+      <DailyPredictions />
 
       {/* Search Section */}
       <section id="search-section" className="py-16 px-4">
