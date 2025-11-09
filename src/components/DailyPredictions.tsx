@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, TrendingDown, Sparkles, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Sparkles, Loader2, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 interface DailyPrediction {
   symbol: string;
@@ -67,6 +68,12 @@ const DailyPredictions = () => {
             <h2 className="text-3xl md:text-4xl font-bold text-primary">
               Daily Stock Predictions
             </h2>
+          </div>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Calendar className="h-5 w-5 text-muted-foreground" />
+            <p className="text-lg font-medium text-muted-foreground">
+              {format(new Date(), "EEEE, MMMM d, yyyy")}
+            </p>
           </div>
           <p className="text-lg text-muted-foreground mb-6">
             AI-curated bullish and bearish stocks for today's trading opportunities
