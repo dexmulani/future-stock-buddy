@@ -65,8 +65,11 @@ serve(async (req) => {
     // Filter out failed requests
     const validStocks = stockData.filter(stock => stock !== null && stock.changePercent !== 0);
     
+    console.log(`Successfully fetched ${validStocks.length} stocks out of ${stockSymbols.length}`);
+    
     if (validStocks.length === 0) {
-      throw new Error('Failed to fetch market data');
+      console.error('No valid stock data received. Check API key and endpoint.');
+      throw new Error('Unable to fetch market data. Please check API configuration.');
     }
 
     // Sort based on mode
