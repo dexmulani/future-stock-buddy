@@ -15,6 +15,7 @@ interface DailyPrediction {
   currentPrice?: number;
   change?: number;
   changePercent?: number;
+  isDemoData?: boolean;
 }
 
 const DailyPredictions = () => {
@@ -40,7 +41,14 @@ const DailyPredictions = () => {
         return;
       }
 
-      setPredictions(data.predictions || []);
+      const predictions = data.predictions || [];
+      const isDemoData = predictions.some((p: DailyPrediction) => p.reason?.includes('[Demo Data]'));
+      
+      if (isDemoData) {
+        toast.info('Using demo data - API connection pending');
+      }
+
+      setPredictions(predictions);
     } catch (error) {
       console.error('Error fetching predictions:', error);
       toast.error('Failed to fetch daily predictions');
@@ -108,14 +116,21 @@ const DailyPredictions = () => {
             {predictions.map((prediction, index) => (
               <Card 
                 key={prediction.symbol} 
-                className="p-6 bg-card hover:shadow-glow transition-all duration-300 border-2"
+                className="p-6 bg-card hover:shadow-glow transition-all duration-300 border-2 relative"
               >
+                {prediction.reason?.includes('[Demo Data]') && (
+                  <div className="absolute top-2 right-2">
+                    <Badge variant="outline" className="text-xs bg-muted">
+                      Demo Data
+                    </Badge>
+                  </div>
+                )}
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-2xl font-bold text-primary">
                       {prediction.symbol.replace('.NS', '')}
                     </h3>
-                    {prediction.currentPrice > 0 && (
+                    {prediction.currentPrice && prediction.currentPrice > 0 && (
                       <p className="text-lg text-muted-foreground">
                         ₹{prediction.currentPrice.toFixed(2)}
                       </p>
@@ -142,14 +157,14 @@ const DailyPredictions = () => {
                   </div>
 
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {prediction.reason}
+                    {prediction.reason?.replace('[Demo Data] ', '')}
                   </p>
 
-                  {prediction.changePercent !== 0 && (
+                  {prediction.changePercent !== undefined && prediction.changePercent !== 0 && (
                     <div className="pt-3 border-t border-border">
                       <p className="text-xs text-muted-foreground">
                         Current Change: 
-                        <span className={prediction.changePercent > 0 ? "text-green-500 ml-1" : "text-red-500 ml-1"}>
+                        <span className={prediction.changePercent > 0 ? "text-green-500 ml-1 font-semibold" : "text-red-500 ml-1 font-semibold"}>
                           {prediction.changePercent > 0 ? '+' : ''}{prediction.changePercent.toFixed(2)}%
                         </span>
                       </p>
