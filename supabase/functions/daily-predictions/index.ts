@@ -15,88 +15,30 @@ serve(async (req) => {
     const { mode } = await req.json(); // 'bull' or 'bear'
     console.log('Getting daily predictions for mode:', mode);
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY');
+    if (!RAPIDAPI_KEY) {
+      throw new Error('RAPIDAPI_KEY not configured');
     }
 
     // Popular Indian stocks for analysis
     const stockSymbols = [
       'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
       'HINDUNILVR.NS', 'ITC.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'KOTAKBANK.NS',
-      'LT.NS', 'AXISBANK.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS'
+      'LT.NS', 'AXISBANK.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS',
+      'TORNTPHARM.NS', 'HAL.NS', 'M&M.NS', 'BAJFINANCE.NS', 'SUNPHARMA.NS'
     ];
 
-    const prompt = `As an expert stock market analyst, analyze the current market conditions and predict the top 3 ${mode === 'bull' ? 'bullish' : 'bearish'} Indian stocks for today.
-
-Consider:
-- Recent market trends
-- Sector performance
-- Technical indicators
-- Volume analysis
-
-Return ONLY a valid JSON array with exactly 3 stocks in this format:
-[
-  {
-    "symbol": "STOCKNAME.NS",
-    "confidence": 85,
-    "reason": "Brief reason for ${mode === 'bull' ? 'bullish' : 'bearish'} prediction",
-    "expectedMove": 3.5
-  }
-]
-
-Focus on stocks from: ${stockSymbols.join(', ')}
-The confidence should be between 70-95.
-The expectedMove should be percentage (positive for bull, negative for bear).`;
-
-    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert Indian stock market analyst. Return only valid JSON arrays.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.7,
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      const errorText = await aiResponse.text();
-      console.error('AI API error:', aiResponse.status, errorText);
-      throw new Error(`AI API error: ${aiResponse.status}`);
-    }
-
-    const aiData = await aiResponse.json();
-    const content = aiData.choices[0].message.content;
+    console.log('Fetching real market data for stocks...');
     
-    // Extract JSON from the response
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      throw new Error('Failed to parse AI response');
-    }
-
-    const predictions = JSON.parse(jsonMatch[0]);
-
-    // Fetch current prices for the predicted stocks
-    const enrichedPredictions = await Promise.all(
-      predictions.map(async (pred: any) => {
+    // Fetch actual market data for all stocks
+    const stockData = await Promise.all(
+      stockSymbols.map(async (symbol) => {
         try {
           const quoteResponse = await fetch(
-            `https://indian-stock-exchange-api2.p.rapidapi.com/stock?name=${pred.symbol}`,
+            `https://indian-stock-exchange-api2.p.rapidapi.com/stock?name=${symbol}`,
             {
               headers: {
-                'X-RapidAPI-Key': Deno.env.get('RAPIDAPI_KEY') || '',
+                'X-RapidAPI-Key': RAPIDAPI_KEY,
                 'X-RapidAPI-Host': 'indian-stock-exchange-api2.p.rapidapi.com'
               }
             }
@@ -105,24 +47,74 @@ The expectedMove should be percentage (positive for bull, negative for bear).`;
           if (quoteResponse.ok) {
             const quoteData = await quoteResponse.json();
             return {
-              ...pred,
+              symbol,
               currentPrice: quoteData.currentPrice || 0,
               change: quoteData.change || 0,
               changePercent: quoteData.pChange || 0,
+              volume: quoteData.volume || 0,
+              name: quoteData.name || symbol.replace('.NS', '')
             };
           }
         } catch (error) {
-          console.error(`Error fetching price for ${pred.symbol}:`, error);
+          console.error(`Error fetching data for ${symbol}:`, error);
         }
-
-        return {
-          ...pred,
-          currentPrice: 0,
-          change: 0,
-          changePercent: 0,
-        };
+        return null;
       })
     );
+
+    // Filter out failed requests
+    const validStocks = stockData.filter(stock => stock !== null && stock.changePercent !== 0);
+    
+    if (validStocks.length === 0) {
+      throw new Error('Failed to fetch market data');
+    }
+
+    // Sort based on mode
+    const sortedStocks = validStocks.sort((a, b) => {
+      if (mode === 'bull') {
+        return b.changePercent - a.changePercent; // Highest gainers first
+      } else {
+        return a.changePercent - b.changePercent; // Biggest losers first
+      }
+    });
+
+    // Get top 3 stocks
+    const topStocks = sortedStocks.slice(0, 3);
+
+    // Create predictions based on actual market data
+    const enrichedPredictions = topStocks.map((stock, index) => {
+      const absChange = Math.abs(stock.changePercent);
+      const confidence = Math.min(95, Math.max(70, 70 + (absChange * 5)));
+      
+      let reason = '';
+      if (mode === 'bull') {
+        if (absChange > 5) {
+          reason = `Strong upward momentum with ${absChange.toFixed(1)}% gain. High volume indicates strong buying interest.`;
+        } else if (absChange > 3) {
+          reason = `Positive price action with ${absChange.toFixed(1)}% gain. Showing bullish trend.`;
+        } else {
+          reason = `Moderate gains of ${absChange.toFixed(1)}%. Steady upward movement.`;
+        }
+      } else {
+        if (absChange > 5) {
+          reason = `Significant downward pressure with ${absChange.toFixed(1)}% loss. High selling volume.`;
+        } else if (absChange > 3) {
+          reason = `Notable decline of ${absChange.toFixed(1)}%. Bearish sentiment prevailing.`;
+        } else {
+          reason = `Negative movement of ${absChange.toFixed(1)}%. Showing weakness.`;
+        }
+      }
+
+      return {
+        symbol: stock.symbol,
+        confidence: Math.round(confidence),
+        reason,
+        expectedMove: mode === 'bull' ? absChange : -absChange,
+        currentPrice: stock.currentPrice,
+        change: stock.change,
+        changePercent: stock.changePercent,
+      };
+    });
 
     return new Response(
       JSON.stringify({ predictions: enrichedPredictions }),
