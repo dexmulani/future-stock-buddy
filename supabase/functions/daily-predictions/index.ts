@@ -6,6 +6,205 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Technical Analysis Functions
+function calculateSMA(prices: number[], period: number): number {
+  if (prices.length < period) return prices[prices.length - 1];
+  const slice = prices.slice(-period);
+  return slice.reduce((a, b) => a + b, 0) / period;
+}
+
+function calculateEMA(prices: number[], period: number): number {
+  if (prices.length < period) return prices[prices.length - 1];
+  const multiplier = 2 / (period + 1);
+  let ema = calculateSMA(prices.slice(0, period), period);
+  
+  for (let i = period; i < prices.length; i++) {
+    ema = (prices[i] - ema) * multiplier + ema;
+  }
+  return ema;
+}
+
+function calculateRSI(prices: number[], period: number = 14): number {
+  if (prices.length < period + 1) return 50;
+  
+  const changes = [];
+  for (let i = 1; i < prices.length; i++) {
+    changes.push(prices[i] - prices[i - 1]);
+  }
+  
+  let gains = 0;
+  let losses = 0;
+  
+  for (let i = 0; i < period; i++) {
+    if (changes[i] > 0) gains += changes[i];
+    else losses -= changes[i];
+  }
+  
+  let avgGain = gains / period;
+  let avgLoss = losses / period;
+  
+  for (let i = period; i < changes.length; i++) {
+    const change = changes[i];
+    avgGain = (avgGain * (period - 1) + (change > 0 ? change : 0)) / period;
+    avgLoss = (avgLoss * (period - 1) + (change < 0 ? -change : 0)) / period;
+  }
+  
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+function calculateMACD(prices: number[]): { macd: number; signal: number; histogram: number } {
+  const ema12 = calculateEMA(prices, 12);
+  const ema26 = calculateEMA(prices, 26);
+  const macd = ema12 - ema26;
+  
+  const macdLine = [];
+  for (let i = 26; i <= prices.length; i++) {
+    const slice = prices.slice(0, i);
+    const e12 = calculateEMA(slice, 12);
+    const e26 = calculateEMA(slice, 26);
+    macdLine.push(e12 - e26);
+  }
+  
+  const signal = calculateEMA(macdLine, 9);
+  const histogram = macd - signal;
+  
+  return { macd, signal, histogram };
+}
+
+function identifyCandlestickPattern(candles: any[]): string {
+  if (candles.length < 3) return "Insufficient data";
+  
+  const latest = candles[candles.length - 1];
+  const previous = candles[candles.length - 2];
+  const previous2 = candles[candles.length - 3];
+  
+  const latestBody = Math.abs(latest.close - latest.open);
+  const latestRange = latest.high - latest.low;
+  const isBullish = latest.close > latest.open;
+  const prevBullish = previous.close > previous.open;
+  
+  // Hammer/Hanging Man
+  const lowerWick = isBullish ? latest.open - latest.low : latest.close - latest.low;
+  const upperWick = isBullish ? latest.high - latest.close : latest.high - latest.open;
+  if (lowerWick > latestBody * 2 && upperWick < latestBody * 0.3) {
+    return isBullish ? "Hammer (Bullish)" : "Hanging Man (Bearish)";
+  }
+  
+  // Engulfing patterns
+  if (isBullish && !prevBullish && latestBody > Math.abs(previous.close - previous.open)) {
+    return "Bullish Engulfing";
+  }
+  if (!isBullish && prevBullish && latestBody > Math.abs(previous.close - previous.open)) {
+    return "Bearish Engulfing";
+  }
+  
+  // Morning/Evening Star
+  const middleBody = Math.abs(previous.close - previous.open);
+  if (middleBody < latestBody * 0.3 && middleBody < Math.abs(previous2.close - previous2.open) * 0.3) {
+    if (!prevBullish && isBullish && previous2.close < previous2.open) {
+      return "Morning Star (Bullish)";
+    }
+    if (prevBullish && !isBullish && previous2.close > previous2.open) {
+      return "Evening Star (Bearish)";
+    }
+  }
+  
+  return isBullish ? "Bullish" : "Bearish";
+}
+
+async function fetchHistoricalData(symbol: string): Promise<any> {
+  try {
+    // Using Yahoo Finance API alternative - yfinance data
+    const period1 = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60); // 30 days ago
+    const period2 = Math.floor(Date.now() / 1000);
+    
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=1d`;
+    
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.log(`Failed to fetch data for ${symbol}`);
+      return null;
+    }
+    
+    const data = await response.json();
+    const result = data.chart.result[0];
+    
+    if (!result || !result.indicators || !result.indicators.quote[0]) {
+      return null;
+    }
+    
+    const quotes = result.indicators.quote[0];
+    const timestamps = result.timestamp;
+    
+    const candles = [];
+    const closes = [];
+    
+    for (let i = 0; i < timestamps.length; i++) {
+      if (quotes.close[i] !== null) {
+        candles.push({
+          timestamp: timestamps[i],
+          open: quotes.open[i],
+          high: quotes.high[i],
+          low: quotes.low[i],
+          close: quotes.close[i],
+          volume: quotes.volume[i]
+        });
+        closes.push(quotes.close[i]);
+      }
+    }
+    
+    if (closes.length === 0) return null;
+    
+    // Calculate technical indicators
+    const currentPrice = closes[closes.length - 1];
+    const sma20 = calculateSMA(closes, 20);
+    const sma50 = calculateSMA(closes, 50);
+    const ema12 = calculateEMA(closes, 12);
+    const ema26 = calculateEMA(closes, 26);
+    const rsi = calculateRSI(closes);
+    const macd = calculateMACD(closes);
+    const pattern = identifyCandlestickPattern(candles);
+    
+    // Volume analysis
+    const volumes = candles.map(c => c.volume);
+    const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+    const recentVolume = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
+    const volumeTrend = recentVolume > avgVolume * 1.2 ? "High" : recentVolume < avgVolume * 0.8 ? "Low" : "Normal";
+    
+    // Support and Resistance
+    const highs = candles.map(c => c.high);
+    const lows = candles.map(c => c.low);
+    const resistance = Math.max(...highs.slice(-10));
+    const support = Math.min(...lows.slice(-10));
+    
+    return {
+      symbol,
+      currentPrice,
+      priceChange: ((currentPrice - closes[0]) / closes[0] * 100).toFixed(2),
+      sma20,
+      sma50,
+      ema12,
+      ema26,
+      rsi: rsi.toFixed(2),
+      macd: {
+        value: macd.macd.toFixed(2),
+        signal: macd.signal.toFixed(2),
+        histogram: macd.histogram.toFixed(2)
+      },
+      pattern,
+      volumeTrend,
+      support: support.toFixed(2),
+      resistance: resistance.toFixed(2),
+      trend: currentPrice > sma20 && sma20 > sma50 ? "Uptrend" : currentPrice < sma20 && sma20 < sma50 ? "Downtrend" : "Sideways"
+    };
+  } catch (error) {
+    console.error(`Error fetching data for ${symbol}:`, error);
+    return null;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -27,6 +226,15 @@ serve(async (req) => {
       'LT.NS', 'AXISBANK.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS'
     ];
 
+    console.log('Fetching technical analysis data for all stocks...');
+    
+    // Fetch technical data for all stocks
+    const technicalDataPromises = stockSymbols.map(symbol => fetchHistoricalData(symbol));
+    const technicalDataResults = await Promise.all(technicalDataPromises);
+    const technicalData = technicalDataResults.filter(data => data !== null);
+    
+    console.log(`Successfully fetched technical data for ${technicalData.length} stocks`);
+
     const currentDate = new Date().toLocaleDateString('en-IN', { 
       weekday: 'long', 
       year: 'numeric', 
@@ -34,28 +242,81 @@ serve(async (req) => {
       day: 'numeric' 
     });
 
-    const systemPrompt = `You are an expert Indian stock market analyst with deep knowledge of NSE (National Stock Exchange) stocks. 
+    // Build detailed technical analysis summary
+    let technicalSummary = '\n\nTECHNICAL ANALYSIS DATA:\n';
+    technicalData.forEach(data => {
+      technicalSummary += `\n${data.symbol}:
+- Current Price: ₹${data.currentPrice} (${data.priceChange}% over 30 days)
+- Trend: ${data.trend}
+- RSI: ${data.rsi} ${parseFloat(data.rsi) > 70 ? '(Overbought)' : parseFloat(data.rsi) < 30 ? '(Oversold)' : '(Neutral)'}
+- MACD: ${data.macd.value} (Signal: ${data.macd.signal}, Histogram: ${data.macd.histogram})
+- Moving Averages: SMA20=${data.sma20.toFixed(2)}, SMA50=${data.sma50.toFixed(2)}, EMA12=${data.ema12.toFixed(2)}, EMA26=${data.ema26.toFixed(2)}
+- Price vs SMA20: ${((data.currentPrice - data.sma20) / data.sma20 * 100).toFixed(2)}%
+- Candlestick Pattern: ${data.pattern}
+- Volume Trend: ${data.volumeTrend}
+- Support: ₹${data.support}, Resistance: ₹${data.resistance}
+`;
+    });
+
+    const systemPrompt = `You are an expert technical analyst and trader specializing in Indian stock market (NSE).
 Your task is to predict which stocks will be ${mode === 'bull' ? 'BULLISH (going UP)' : 'BEARISH (going DOWN)'} for today: ${currentDate}.
 
-Consider:
-- Recent market trends and sector performance
-- Global market influences
-- Company fundamentals and recent news
-- Technical indicators and momentum
-- Market sentiment and investor behavior
-- Sector rotation patterns
+ANALYSIS METHODOLOGY:
+Use professional technical analysis combining:
 
-Provide 3 stocks from this list that you predict will be the ${mode === 'bull' ? 'TOP GAINERS' : 'TOP LOSERS'} today: ${stockSymbols.join(', ')}
+1. TREND ANALYSIS:
+   - Price position relative to moving averages (SMA20, SMA50)
+   - EMA crossovers (EMA12 vs EMA26)
+   - Overall trend direction
+
+2. MOMENTUM INDICATORS:
+   - RSI: <30 oversold (potential reversal up), >70 overbought (potential reversal down), 40-60 neutral
+   - MACD: Positive histogram = bullish momentum, negative = bearish momentum
+   - MACD crossovers (MACD line vs Signal line)
+
+3. CANDLESTICK PATTERNS:
+   - Bullish patterns: Hammer, Bullish Engulfing, Morning Star
+   - Bearish patterns: Hanging Man, Bearish Engulfing, Evening Star
+   - Pattern strength increases with volume confirmation
+
+4. VOLUME ANALYSIS:
+   - High volume = strong conviction in price movement
+   - Volume trends confirm or reject price movements
+
+5. SUPPORT & RESISTANCE:
+   - Price near support in uptrend = buying opportunity
+   - Price near resistance in downtrend = selling pressure
+
+${technicalSummary}
+
+PREDICTION CRITERIA for ${mode === 'bull' ? 'BULLISH' : 'BEARISH'} stocks:
+${mode === 'bull' ? `
+- RSI between 30-60 (oversold recovery or healthy momentum)
+- MACD histogram turning positive or already positive
+- Price above SMA20 or showing bullish crossover
+- Bullish candlestick patterns (Hammer, Bullish Engulfing, Morning Star)
+- High volume supporting upward movement
+- Price breaking above resistance or bouncing from support
+` : `
+- RSI above 60-70 (overbought, due for correction)
+- MACD histogram turning negative or already negative  
+- Price below SMA20 or showing bearish crossover
+- Bearish candlestick patterns (Hanging Man, Bearish Engulfing, Evening Star)
+- High volume supporting downward movement
+- Price breaking below support or rejected at resistance
+`}
+
+Select the TOP 3 stocks that show the STRONGEST technical signals for ${mode === 'bull' ? 'upward' : 'downward'} movement.
 
 For each stock, provide:
 1. Symbol (e.g., RELIANCE.NS)
-2. Confidence (70-95%)
-3. Expected price move (percentage, e.g., 2.5 for bull or -2.5 for bear)
-4. Reason (concise explanation in 1-2 sentences)
+2. Confidence (70-95%) based on how many technical indicators align
+3. Expected price move (realistic percentage based on volatility and technical setup)
+4. Reason (cite specific technical indicators: RSI level, MACD signal, pattern, trend, support/resistance)
 
-Format as JSON array with structure: [{"symbol": "STOCK.NS", "confidence": 85, "expectedMove": 2.5, "reason": "explanation"}]`;
+Format as JSON array: [{"symbol": "STOCK.NS", "confidence": 85, "expectedMove": 2.5, "reason": "Technical explanation with specific indicators"}]`;
 
-    console.log('Calling Lovable AI for stock predictions...');
+    console.log('Calling Lovable AI for stock predictions with technical analysis...');
     
     const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
