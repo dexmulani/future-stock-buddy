@@ -42,10 +42,9 @@ const DailyPredictions = () => {
       }
 
       const predictions = data.predictions || [];
-      const isDemoData = predictions.some((p: DailyPrediction) => p.reason?.includes('[Demo Data]'));
       
-      if (isDemoData) {
-        toast.info('Using demo data - API connection pending');
+      if (predictions.length > 0) {
+        toast.success(`AI predictions generated for ${selectedMode === 'bull' ? 'bullish' : 'bearish'} stocks`);
       }
 
       setPredictions(predictions);
@@ -84,7 +83,7 @@ const DailyPredictions = () => {
             </p>
           </div>
           <p className="text-lg text-muted-foreground mb-6">
-            Real-time bullish and bearish stocks based on today's market performance
+            AI-powered predictions for today's top bullish and bearish stocks
           </p>
           
           <div className="flex gap-3 justify-center">
@@ -118,13 +117,11 @@ const DailyPredictions = () => {
                 key={prediction.symbol} 
                 className="p-6 bg-card hover:shadow-glow transition-all duration-300 border-2 relative"
               >
-                {prediction.reason?.includes('[Demo Data]') && (
-                  <div className="absolute top-2 right-2">
-                    <Badge variant="outline" className="text-xs bg-muted">
-                      Demo Data
-                    </Badge>
-                  </div>
-                )}
+                <div className="absolute top-2 right-2">
+                  <Badge variant="default" className="text-xs bg-primary/10 text-primary border-primary/20">
+                    AI Predicted
+                  </Badge>
+                </div>
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-2xl font-bold text-primary">
@@ -157,19 +154,8 @@ const DailyPredictions = () => {
                   </div>
 
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {prediction.reason?.replace('[Demo Data] ', '')}
+                    {prediction.reason}
                   </p>
-
-                  {prediction.changePercent !== undefined && prediction.changePercent !== 0 && (
-                    <div className="pt-3 border-t border-border">
-                      <p className="text-xs text-muted-foreground">
-                        Current Change: 
-                        <span className={prediction.changePercent > 0 ? "text-green-500 ml-1 font-semibold" : "text-red-500 ml-1 font-semibold"}>
-                          {prediction.changePercent > 0 ? '+' : ''}{Number(prediction.changePercent).toFixed(2)}%
-                        </span>
-                      </p>
-                    </div>
-                  )}
                 </div>
               </Card>
             ))}

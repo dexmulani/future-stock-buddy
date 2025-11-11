@@ -12,187 +12,116 @@ serve(async (req) => {
   }
 
   try {
-    const { mode } = await req.json(); // 'bull' or 'bear'
-    console.log('Getting daily predictions for mode:', mode);
+    const { mode } = await req.json();
+    console.log('Generating AI predictions for mode:', mode);
 
-    const RAPIDAPI_KEY = Deno.env.get('RAPIDAPI_KEY');
-    if (!RAPIDAPI_KEY) {
-      throw new Error('RAPIDAPI_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
     // Popular Indian stocks for analysis
     const stockSymbols = [
       'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'INFY.NS', 'ICICIBANK.NS',
       'HINDUNILVR.NS', 'ITC.NS', 'SBIN.NS', 'BHARTIARTL.NS', 'KOTAKBANK.NS',
-      'LT.NS', 'AXISBANK.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS',
-      'TORNTPHARM.NS', 'HAL.NS', 'M&M.NS', 'BAJFINANCE.NS', 'SUNPHARMA.NS'
+      'LT.NS', 'AXISBANK.NS', 'ASIANPAINT.NS', 'MARUTI.NS', 'TITAN.NS'
     ];
 
-    console.log('Fetching real market data for stocks...');
+    const currentDate = new Date().toLocaleDateString('en-IN', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+
+    const systemPrompt = `You are an expert Indian stock market analyst with deep knowledge of NSE (National Stock Exchange) stocks. 
+Your task is to predict which stocks will be ${mode === 'bull' ? 'BULLISH (going UP)' : 'BEARISH (going DOWN)'} for today: ${currentDate}.
+
+Consider:
+- Recent market trends and sector performance
+- Global market influences
+- Company fundamentals and recent news
+- Technical indicators and momentum
+- Market sentiment and investor behavior
+- Sector rotation patterns
+
+Provide 3 stocks from this list that you predict will be the ${mode === 'bull' ? 'TOP GAINERS' : 'TOP LOSERS'} today: ${stockSymbols.join(', ')}
+
+For each stock, provide:
+1. Symbol (e.g., RELIANCE.NS)
+2. Confidence (70-95%)
+3. Expected price move (percentage, e.g., 2.5 for bull or -2.5 for bear)
+4. Reason (concise explanation in 1-2 sentences)
+
+Format as JSON array with structure: [{"symbol": "STOCK.NS", "confidence": 85, "expectedMove": 2.5, "reason": "explanation"}]`;
+
+    console.log('Calling Lovable AI for stock predictions...');
     
-    // Fetch actual market data for all stocks
-    const stockData = await Promise.all(
-      stockSymbols.map(async (symbol) => {
-        try {
-          const apiUrl = `https://indian-stock-exchange-api2.p.rapidapi.com/stock?name=${symbol}`;
-          console.log(`Fetching ${symbol} from ${apiUrl}`);
-          
-          const quoteResponse = await fetch(apiUrl, {
-            headers: {
-              'X-RapidAPI-Key': RAPIDAPI_KEY,
-              'X-RapidAPI-Host': 'indian-stock-exchange-api2.p.rapidapi.com'
-            }
-          });
-
-          console.log(`Response status for ${symbol}: ${quoteResponse.status}`);
-          
-          if (quoteResponse.ok) {
-            const quoteData = await quoteResponse.json();
-            console.log(`Data for ${symbol}:`, JSON.stringify(quoteData).substring(0, 200));
-            
-            // Check various possible response formats and ensure numeric values
-            const currentPrice = Number(quoteData.currentPrice || quoteData.lastPrice || quoteData.ltp || 0);
-            const change = Number(quoteData.change || quoteData.priceChange || 0);
-            const changePercent = Number(quoteData.pChange || quoteData.percentChange || quoteData.changePer || 0);
-            
-            return {
-              symbol,
-              currentPrice,
-              change,
-              changePercent,
-              volume: Number(quoteData.volume || quoteData.totalTradedVolume || 0),
-              name: quoteData.name || quoteData.companyName || symbol.replace('.NS', '')
-            };
-          } else {
-            const errorText = await quoteResponse.text();
-            console.error(`Failed to fetch ${symbol}: ${quoteResponse.status} - ${errorText}`);
+    const aiResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { 
+            role: 'user', 
+            content: `Predict the top 3 ${mode === 'bull' ? 'bullish' : 'bearish'} stocks for today from the Indian market. Respond ONLY with a JSON array, no additional text.` 
           }
-        } catch (error) {
-          console.error(`Error fetching data for ${symbol}:`, error.message);
-        }
-        return null;
-      })
-    );
+        ],
+        temperature: 0.7,
+      }),
+    });
 
-    // Filter out failed requests
-    const validStocks = stockData.filter(stock => stock !== null && stock.changePercent !== 0);
-    
-    console.log(`Successfully fetched ${validStocks.length} stocks out of ${stockSymbols.length}`);
-    
-    // If API fails, use fallback demo data
-    if (validStocks.length === 0) {
-      console.warn('No valid stock data from API. Using fallback demo data.');
-      const fallbackStocks = mode === 'bull' 
-        ? [
-            { symbol: 'RELIANCE.NS', currentPrice: 2845.50, change: 125.30, changePercent: 4.61, volume: 8500000, name: 'Reliance Industries' },
-            { symbol: 'TCS.NS', currentPrice: 3650.75, change: 142.50, changePercent: 4.06, volume: 3200000, name: 'Tata Consultancy Services' },
-            { symbol: 'INFY.NS', currentPrice: 1542.20, change: 58.45, changePercent: 3.94, volume: 5600000, name: 'Infosys' }
-          ]
-        : [
-            { symbol: 'SBIN.NS', currentPrice: 625.80, change: -28.40, changePercent: -4.34, volume: 12000000, name: 'State Bank of India' },
-            { symbol: 'ICICIBANK.NS', currentPrice: 1058.50, change: -42.25, changePercent: -3.84, volume: 8500000, name: 'ICICI Bank' },
-            { symbol: 'HDFCBANK.NS', currentPrice: 1642.30, change: -58.70, changePercent: -3.45, volume: 7200000, name: 'HDFC Bank' }
-          ];
-      
-      const sortedStocks = fallbackStocks;
-      const topStocks = sortedStocks.slice(0, 3);
-      
-      const enrichedPredictions = topStocks.map((stock) => {
-        const absChange = Math.abs(stock.changePercent);
-        const confidence = Math.min(95, Math.max(70, 70 + (absChange * 5)));
-        
-        let reason = '';
-        if (mode === 'bull') {
-          if (absChange > 5) {
-            reason = `Strong upward momentum with ${absChange.toFixed(1)}% gain. High volume indicates strong buying interest.`;
-          } else if (absChange > 3) {
-            reason = `Positive price action with ${absChange.toFixed(1)}% gain. Showing bullish trend.`;
-          } else {
-            reason = `Moderate gains of ${absChange.toFixed(1)}%. Steady upward movement.`;
-          }
-        } else {
-          if (absChange > 5) {
-            reason = `Significant downward pressure with ${absChange.toFixed(1)}% loss. High selling volume.`;
-          } else if (absChange > 3) {
-            reason = `Notable decline of ${absChange.toFixed(1)}%. Bearish sentiment prevailing.`;
-          } else {
-            reason = `Negative movement of ${absChange.toFixed(1)}%. Showing weakness.`;
-          }
-        }
-
-        return {
-          symbol: stock.symbol,
-          confidence: Math.round(confidence),
-          reason: `[Demo Data] ${reason}`,
-          expectedMove: mode === 'bull' ? absChange : -absChange,
-          currentPrice: stock.currentPrice,
-          change: stock.change,
-          changePercent: stock.changePercent,
-        };
-      });
-
-      return new Response(
-        JSON.stringify({ predictions: enrichedPredictions }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('AI API error:', aiResponse.status, errorText);
+      throw new Error(`AI prediction failed: ${aiResponse.status}`);
     }
 
-    // Sort based on mode
-    const sortedStocks = validStocks.sort((a, b) => {
-      if (mode === 'bull') {
-        return b.changePercent - a.changePercent; // Highest gainers first
-      } else {
-        return a.changePercent - b.changePercent; // Biggest losers first
-      }
-    });
+    const aiData = await aiResponse.json();
+    console.log('AI Response:', JSON.stringify(aiData).substring(0, 500));
 
-    // Get top 3 stocks
-    const topStocks = sortedStocks.slice(0, 3);
+    const aiContent = aiData.choices?.[0]?.message?.content || '[]';
+    console.log('AI Content:', aiContent);
 
-    // Create predictions based on actual market data
-    const enrichedPredictions = topStocks.map((stock, index) => {
-      const absChange = Math.abs(stock.changePercent);
-      const confidence = Math.min(95, Math.max(70, 70 + (absChange * 5)));
-      
-      let reason = '';
-      if (mode === 'bull') {
-        if (absChange > 5) {
-          reason = `Strong upward momentum with ${absChange.toFixed(1)}% gain. High volume indicates strong buying interest.`;
-        } else if (absChange > 3) {
-          reason = `Positive price action with ${absChange.toFixed(1)}% gain. Showing bullish trend.`;
-        } else {
-          reason = `Moderate gains of ${absChange.toFixed(1)}%. Steady upward movement.`;
-        }
-      } else {
-        if (absChange > 5) {
-          reason = `Significant downward pressure with ${absChange.toFixed(1)}% loss. High selling volume.`;
-        } else if (absChange > 3) {
-          reason = `Notable decline of ${absChange.toFixed(1)}%. Bearish sentiment prevailing.`;
-        } else {
-          reason = `Negative movement of ${absChange.toFixed(1)}%. Showing weakness.`;
-        }
-      }
+    // Extract JSON from the response (handle markdown code blocks)
+    let jsonContent = aiContent.trim();
+    if (jsonContent.startsWith('```json')) {
+      jsonContent = jsonContent.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    } else if (jsonContent.startsWith('```')) {
+      jsonContent = jsonContent.replace(/```\n?/g, '');
+    }
 
-      return {
-        symbol: stock.symbol,
-        confidence: Math.round(confidence),
-        reason,
-        expectedMove: mode === 'bull' ? absChange : -absChange,
-        currentPrice: stock.currentPrice,
-        change: stock.change,
-        changePercent: stock.changePercent,
-      };
-    });
+    const predictions = JSON.parse(jsonContent);
+    console.log('Parsed predictions:', predictions);
+
+    // Validate and format predictions
+    const formattedPredictions = predictions.slice(0, 3).map((pred: any) => ({
+      symbol: pred.symbol,
+      confidence: Math.round(Math.min(95, Math.max(70, pred.confidence || 80))),
+      reason: pred.reason || 'AI-predicted movement based on market analysis',
+      expectedMove: Number(pred.expectedMove || (mode === 'bull' ? 2.0 : -2.0)),
+      currentPrice: 0,
+      change: 0,
+      changePercent: 0,
+    }));
 
     return new Response(
-      JSON.stringify({ predictions: enrichedPredictions }),
+      JSON.stringify({ predictions: formattedPredictions }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
     console.error('Error in daily-predictions:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        predictions: [] 
+      }),
       { 
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
