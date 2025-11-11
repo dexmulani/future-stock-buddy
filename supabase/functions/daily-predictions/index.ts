@@ -50,17 +50,17 @@ serve(async (req) => {
             const quoteData = await quoteResponse.json();
             console.log(`Data for ${symbol}:`, JSON.stringify(quoteData).substring(0, 200));
             
-            // Check various possible response formats
-            const currentPrice = quoteData.currentPrice || quoteData.lastPrice || quoteData.ltp || 0;
-            const change = quoteData.change || quoteData.priceChange || 0;
-            const changePercent = quoteData.pChange || quoteData.percentChange || quoteData.changePer || 0;
+            // Check various possible response formats and ensure numeric values
+            const currentPrice = Number(quoteData.currentPrice || quoteData.lastPrice || quoteData.ltp || 0);
+            const change = Number(quoteData.change || quoteData.priceChange || 0);
+            const changePercent = Number(quoteData.pChange || quoteData.percentChange || quoteData.changePer || 0);
             
             return {
               symbol,
               currentPrice,
               change,
               changePercent,
-              volume: quoteData.volume || quoteData.totalTradedVolume || 0,
+              volume: Number(quoteData.volume || quoteData.totalTradedVolume || 0),
               name: quoteData.name || quoteData.companyName || symbol.replace('.NS', '')
             };
           } else {

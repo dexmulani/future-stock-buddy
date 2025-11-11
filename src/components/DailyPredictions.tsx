@@ -152,7 +152,7 @@ const DailyPredictions = () => {
                       variant={mode === "bull" ? "default" : "destructive"}
                       className="text-xs"
                     >
-                      {prediction.expectedMove > 0 ? '+' : ''}{prediction.expectedMove.toFixed(2)}%
+                      {prediction.expectedMove > 0 ? '+' : ''}{Number(prediction.expectedMove).toFixed(2)}%
                     </Badge>
                   </div>
 
@@ -165,7 +165,7 @@ const DailyPredictions = () => {
                       <p className="text-xs text-muted-foreground">
                         Current Change: 
                         <span className={prediction.changePercent > 0 ? "text-green-500 ml-1 font-semibold" : "text-red-500 ml-1 font-semibold"}>
-                          {prediction.changePercent > 0 ? '+' : ''}{prediction.changePercent.toFixed(2)}%
+                          {prediction.changePercent > 0 ? '+' : ''}{Number(prediction.changePercent).toFixed(2)}%
                         </span>
                       </p>
                     </div>
