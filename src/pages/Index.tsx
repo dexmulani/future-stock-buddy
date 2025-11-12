@@ -4,7 +4,6 @@ import StockSearch from "@/components/StockSearch";
 import PredictionCard from "@/components/PredictionCard";
 import PortfolioUpload from "@/components/PortfolioUpload";
 import PortfolioHealth from "@/components/PortfolioHealth";
-import DailyPredictions from "@/components/DailyPredictions";
 import { Button } from "@/components/ui/button";
 import { Brain, Zap, Shield, TrendingUp } from "lucide-react";
 import heroImage from "@/assets/stock-hero.jpg";
@@ -150,9 +149,9 @@ const Index = () => {
             </div>
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
               <Zap className="h-12 w-12 text-accent mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Daily Market Picks</h3>
+              <h3 className="text-xl font-semibold mb-2">Custom Time Periods</h3>
               <p className="text-muted-foreground">
-                Get AI-curated bullish and bearish stock predictions updated daily to help you make informed decisions
+                Analyze stocks for any holding period from 1 day to 1 year to match your investment strategy
               </p>
             </div>
             <div className="text-center p-6 bg-card rounded-lg shadow-card hover:shadow-glow transition-all duration-300">
@@ -165,9 +164,6 @@ const Index = () => {
           </div>
         </div>
       </section>
-
-      {/* Daily Predictions Section */}
-      <DailyPredictions />
 
       {/* Search Section */}
       <section id="search-section" className="py-16 px-4">
