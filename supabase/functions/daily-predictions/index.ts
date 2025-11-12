@@ -116,49 +116,81 @@ function identifyCandlestickPattern(candles: any[]): string {
 
 async function fetchHistoricalData(symbol: string): Promise<any> {
   try {
-    // Using Yahoo Finance API alternative - yfinance data
-    const period1 = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60); // 30 days ago
+    // Using Yahoo Finance API - try multiple endpoints for reliability
+    const period1 = Math.floor(Date.now() / 1000) - (60 * 24 * 60 * 60); // 60 days for better technical analysis
     const period2 = Math.floor(Date.now() / 1000);
     
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?period1=${period1}&period2=${period2}&interval=1d`;
     
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
     if (!response.ok) {
-      console.log(`Failed to fetch data for ${symbol}`);
+      console.error(`Yahoo Finance API failed for ${symbol}: ${response.status}`);
       return null;
     }
     
     const data = await response.json();
+    
+    if (!data?.chart?.result || data.chart.result.length === 0) {
+      console.error(`No chart data for ${symbol}`);
+      return null;
+    }
+    
     const result = data.chart.result[0];
     
-    if (!result || !result.indicators || !result.indicators.quote[0]) {
+    if (!result?.indicators?.quote?.[0]) {
+      console.error(`No indicators data for ${symbol}`);
       return null;
     }
     
     const quotes = result.indicators.quote[0];
-    const timestamps = result.timestamp;
+    const timestamps = result.timestamp || [];
+    
+    // Validate we have the required data
+    if (!quotes.close || !quotes.open || !quotes.high || !quotes.low || timestamps.length === 0) {
+      console.error(`Missing price data for ${symbol}`);
+      return null;
+    }
     
     const candles = [];
     const closes = [];
     
     for (let i = 0; i < timestamps.length; i++) {
-      if (quotes.close[i] !== null) {
+      const close = quotes.close[i];
+      const open = quotes.open[i];
+      const high = quotes.high[i];
+      const low = quotes.low[i];
+      const volume = quotes.volume?.[i];
+      
+      // Only add valid candles
+      if (close !== null && close !== undefined && 
+          open !== null && open !== undefined &&
+          high !== null && high !== undefined &&
+          low !== null && low !== undefined) {
         candles.push({
           timestamp: timestamps[i],
-          open: quotes.open[i],
-          high: quotes.high[i],
-          low: quotes.low[i],
-          close: quotes.close[i],
-          volume: quotes.volume[i]
+          open: open,
+          high: high,
+          low: low,
+          close: close,
+          volume: volume || 0
         });
-        closes.push(quotes.close[i]);
+        closes.push(close);
       }
     }
     
-    if (closes.length === 0) return null;
+    if (closes.length < 20) {
+      console.error(`Insufficient data for ${symbol}: only ${closes.length} candles`);
+      return null;
+    }
     
     // Calculate technical indicators
     const currentPrice = closes[closes.length - 1];
+    const firstPrice = closes[0];
     const sma20 = calculateSMA(closes, 20);
     const sma50 = calculateSMA(closes, 50);
     const ema12 = calculateEMA(closes, 12);
@@ -168,39 +200,47 @@ async function fetchHistoricalData(symbol: string): Promise<any> {
     const pattern = identifyCandlestickPattern(candles);
     
     // Volume analysis
-    const volumes = candles.map(c => c.volume);
-    const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
-    const recentVolume = volumes.slice(-5).reduce((a, b) => a + b, 0) / 5;
-    const volumeTrend = recentVolume > avgVolume * 1.2 ? "High" : recentVolume < avgVolume * 0.8 ? "Low" : "Normal";
+    const volumes = candles.map(c => c.volume).filter(v => v > 0);
+    const avgVolume = volumes.length > 0 ? volumes.reduce((a, b) => a + b, 0) / volumes.length : 0;
+    const recentVolume = volumes.length >= 5 ? volumes.slice(-5).reduce((a, b) => a + b, 0) / 5 : avgVolume;
+    const volumeTrend = avgVolume > 0 && recentVolume > avgVolume * 1.2 ? "High" : 
+                        avgVolume > 0 && recentVolume < avgVolume * 0.8 ? "Low" : "Normal";
     
     // Support and Resistance
-    const highs = candles.map(c => c.high);
-    const lows = candles.map(c => c.low);
-    const resistance = Math.max(...highs.slice(-10));
-    const support = Math.min(...lows.slice(-10));
+    const recentCandles = candles.slice(-20); // Last 20 days
+    const highs = recentCandles.map(c => c.high);
+    const lows = recentCandles.map(c => c.low);
+    const resistance = Math.max(...highs);
+    const support = Math.min(...lows);
+    
+    const priceChange = ((currentPrice - firstPrice) / firstPrice * 100);
+    
+    console.log(`✓ Successfully fetched data for ${symbol}: ₹${currentPrice.toFixed(2)} (${priceChange > 0 ? '+' : ''}${priceChange.toFixed(2)}%)`);
     
     return {
       symbol,
-      currentPrice,
-      priceChange: ((currentPrice - closes[0]) / closes[0] * 100).toFixed(2),
-      sma20,
-      sma50,
-      ema12,
-      ema26,
-      rsi: rsi.toFixed(2),
+      currentPrice: Number(currentPrice.toFixed(2)),
+      priceChange: Number(priceChange.toFixed(2)),
+      sma20: Number(sma20.toFixed(2)),
+      sma50: Number(sma50.toFixed(2)),
+      ema12: Number(ema12.toFixed(2)),
+      ema26: Number(ema26.toFixed(2)),
+      rsi: Number(rsi.toFixed(2)),
       macd: {
-        value: macd.macd.toFixed(2),
-        signal: macd.signal.toFixed(2),
-        histogram: macd.histogram.toFixed(2)
+        value: Number(macd.macd.toFixed(2)),
+        signal: Number(macd.signal.toFixed(2)),
+        histogram: Number(macd.histogram.toFixed(2))
       },
       pattern,
       volumeTrend,
-      support: support.toFixed(2),
-      resistance: resistance.toFixed(2),
-      trend: currentPrice > sma20 && sma20 > sma50 ? "Uptrend" : currentPrice < sma20 && sma20 < sma50 ? "Downtrend" : "Sideways"
+      support: Number(support.toFixed(2)),
+      resistance: Number(resistance.toFixed(2)),
+      trend: currentPrice > sma20 && sma20 > sma50 ? "Uptrend" : 
+             currentPrice < sma20 && sma20 < sma50 ? "Downtrend" : "Sideways",
+      dataPoints: closes.length
     };
   } catch (error) {
-    console.error(`Error fetching data for ${symbol}:`, error);
+    console.error(`Error fetching data for ${symbol}:`, error.message || error);
     return null;
   }
 }
@@ -228,12 +268,24 @@ serve(async (req) => {
 
     console.log('Fetching technical analysis data for all stocks...');
     
-    // Fetch technical data for all stocks
-    const technicalDataPromises = stockSymbols.map(symbol => fetchHistoricalData(symbol));
-    const technicalDataResults = await Promise.all(technicalDataPromises);
-    const technicalData = technicalDataResults.filter(data => data !== null);
+    // Fetch technical data for all stocks with sequential requests to avoid rate limiting
+    const technicalData = [];
+    for (const symbol of stockSymbols) {
+      const data = await fetchHistoricalData(symbol);
+      if (data !== null) {
+        technicalData.push(data);
+      }
+      // Small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
     
-    console.log(`Successfully fetched technical data for ${technicalData.length} stocks`);
+    console.log(`Successfully fetched technical data for ${technicalData.length}/${stockSymbols.length} stocks`);
+    
+    // If we got less than 5 stocks, fail gracefully
+    if (technicalData.length < 5) {
+      console.error('Insufficient stock data fetched');
+      throw new Error('Unable to fetch enough stock data for predictions. Please try again later.');
+    }
 
     const currentDate = new Date().toLocaleDateString('en-IN', { 
       weekday: 'long', 
@@ -360,16 +412,19 @@ Format as JSON array: [{"symbol": "STOCK.NS", "confidence": 85, "expectedMove": 
     const predictions = JSON.parse(jsonContent);
     console.log('Parsed predictions:', predictions);
 
-    // Validate and format predictions
-    const formattedPredictions = predictions.slice(0, 3).map((pred: any) => ({
-      symbol: pred.symbol,
-      confidence: Math.round(Math.min(95, Math.max(70, pred.confidence || 80))),
-      reason: pred.reason || 'AI-predicted movement based on market analysis',
-      expectedMove: Number(pred.expectedMove || (mode === 'bull' ? 2.0 : -2.0)),
-      currentPrice: 0,
-      change: 0,
-      changePercent: 0,
-    }));
+    // Validate and format predictions with actual price data
+    const formattedPredictions = predictions.slice(0, 3).map((pred: any) => {
+      const stockData = technicalData.find(d => d.symbol === pred.symbol);
+      return {
+        symbol: pred.symbol,
+        confidence: Math.round(Math.min(95, Math.max(70, pred.confidence || 80))),
+        reason: pred.reason || 'AI-predicted movement based on market analysis',
+        expectedMove: Number(pred.expectedMove || (mode === 'bull' ? 2.0 : -2.0)),
+        currentPrice: stockData?.currentPrice || 0,
+        change: stockData?.priceChange || 0,
+        changePercent: stockData?.priceChange || 0,
+      };
+    });
 
     return new Response(
       JSON.stringify({ predictions: formattedPredictions }),
