@@ -58,6 +58,8 @@ const symbolMappings: Record<string, string> = {
   'TECH MAHINDRA': 'TECHM',
   'HCL TECH': 'HCLTECH',
   'HCL': 'HCLTECH',
+  'BHARAT ELECTRONICS': 'BEL',
+  'BEL': 'BEL',
 };
 
 // Normalize symbol: remove spaces, convert to uppercase, and map to ticker
