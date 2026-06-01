@@ -9,7 +9,7 @@ AI-powered Stock Market Prediction system with trend forecasting, analytics, and
 - Stock Price Prediction
 - AI-based Buy/Sell Signals
 - Historical Stock Analysis
-- Technical Indicators
+- Technical Indicators       
 - Risk Assessment
 - Interactive Charts
 - Stock Comparison Tool
