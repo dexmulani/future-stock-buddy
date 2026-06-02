@@ -11,7 +11,7 @@ AI-powered Stock Market Prediction system with trend forecasting, analytics, and
 - Historical Stock Analysis
 - Technical Indicators       
 - Risk Assessment
-- Interactive Charts
+- Interactive Charts      
 - Stock Comparison Tool
 - Investment Recommendations
 
