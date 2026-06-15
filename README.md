@@ -1,7 +1,7 @@
 # AI Stock Predictor
 
 AI-powered Stock Market Prediction system with trend forecasting, analytics, and intelligent investment insights.
-        
+                        
 ---
 
 ## Features
